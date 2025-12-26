@@ -47,7 +47,10 @@ with st.sidebar:
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
-    feedback = st.text_area("Write your message here…", placeholder="Type your feedback here...")
+    feedback = st.text_area(
+        "Write your message here…",
+        placeholder="Type your feedback here..."
+    )
 
     if st.button("Send Feedback"):
         if feedback.strip():
@@ -68,82 +71,79 @@ with st.sidebar:
 
 # ---------------- THEME VARIABLES ----------------
 if st.session_state.dark_mode:
-    bg_gradient = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
+    bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
     sidebar_bg = "#0b1f2a"
-    text_color = "#ffffff"
+    text = "#ffffff"
     input_bg = "#1e2a33"
-    border_color = "#ffffff"
-    button_bg = "#000000"
-    button_text = "#ffffff"
+    border = "#ffffff"
+    btn_bg = "#000000"
+    btn_text = "#ffffff"
 else:
-    bg_gradient = "linear-gradient(-45deg,#f4f6f8,#eef1f4,#e6ebf0,#f4f6f8)"
+    bg = "linear-gradient(-45deg,#f4f6f8,#eef1f4,#e6ebf0,#f4f6f8)"
     sidebar_bg = "#ffffff"
-    text_color = "#000000"
+    text = "#000000"
     input_bg = "#ffffff"
-    border_color = "#000000"
-    button_bg = "#000000"
-    button_text = "#ffffff"
+    border = "#000000"
+    btn_bg = "#ffffff"
+    btn_text = "#000000"
 
-# ---------------- GLOBAL CSS FIX ----------------
+# ---------------- CSS (FINAL FIX) ----------------
 st.markdown(f"""
 <style>
 
-/* App background */
+/* APP */
 .stApp {{
-    background: {bg_gradient};
-    background-size: 400% 400%;
-    animation: gradientMove 16s ease infinite;
-    color: {text_color};
+    background: {bg};
+    color: {text};
 }}
 
-/* Sidebar */
+/* SIDEBAR */
 [data-testid="stSidebar"] {{
     background: {sidebar_bg};
 }}
 [data-testid="stSidebar"] * {{
-    color: {text_color} !important;
+    color: {text} !important;
 }}
 
-/* Buttons */
+/* BUTTONS (CLEAR CHAT + SEND FEEDBACK) */
 .stButton > button {{
-    background-color: {button_bg} !important;
-    color: {button_text} !important;
-    border-radius: 8px;
-    border: 1px solid {border_color};
+    background: {btn_bg} !important;
+    color: {btn_text} !important;
+    border: 2px solid {border} !important;
+    border-radius: 10px;
     font-weight: 600;
+    padding: 0.4rem 0.8rem;
 }}
 .stButton > button:hover {{
-    opacity: 0.9;
+    filter: brightness(0.95);
+}}
+.stButton > button:disabled {{
+    opacity: 1 !important;
 }}
 
-/* Text area + inputs */
+/* TEXTAREA + INPUT */
 textarea, input {{
-    background-color: {input_bg} !important;
-    color: {text_color} !important;
-    border: 2px solid {border_color} !important;
-    border-radius: 8px;
+    background: {input_bg} !important;
+    color: {text} !important;
+    border: 2px solid {border} !important;
+    outline: none !important;
+    box-shadow: none !important;
+    border-radius: 10px;
+}}
+textarea::placeholder {{
+    color: {"#bbbbbb" if st.session_state.dark_mode else "#555555"} !important;
 }}
 
-/* Chat bubbles */
+/* CHAT */
 .stChatMessage[data-testid="stChatMessage-user"] {{
     background: linear-gradient(135deg,#ff4d4d,#ff7a18);
     color: #000000;
     border-radius: 16px;
-    padding: 12px;
 }}
-
 .stChatMessage[data-testid="stChatMessage-assistant"] {{
-    background: rgba(255,255,255,0.12);
-    color: {text_color};
+    background: rgba(255,255,255,0.15);
+    color: {text};
     border-radius: 16px;
-    padding: 12px;
-}}
-
-/* Animation */
-@keyframes gradientMove {{
-    0% {{background-position: 0% 50%;}}
-    50% {{background-position: 100% 50%;}}
-    100% {{background-position: 0% 50%;}}
 }}
 
 </style>
@@ -152,19 +152,14 @@ textarea, input {{
 # ---------------- SMART LOCAL ANSWER ----------------
 def smart_answer(prompt: str):
     text = prompt.lower()
-    city = "Bengaluru"
-
-    bars = [
-        "Toit – Indiranagar",
-        "Big Pitcher – Indiranagar",
-        "The Biere Club – Lavelle Road",
-        "Skyye – Rooftop Lounge",
-        "Drunken Daddy – Koramangala"
-    ]
-
     if "bar" in text and ("near me" in text or "suggest" in text):
-        return f"### 🍺 Best bars in {city}\n" + "\n".join(f"- {b}" for b in bars)
-
+        return """### 🍺 Best bars in Bengaluru
+- Toit – Indiranagar
+- Big Pitcher – Indiranagar
+- The Biere Club – Lavelle Road
+- Skyye – Rooftop Lounge
+- Drunken Daddy – Koramangala
+"""
     return None
 
 # ---------------- LLM ----------------
@@ -197,26 +192,26 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    local = smart_answer(prompt)
+    reply = smart_answer(prompt)
 
-    if local:
+    if reply:
+        st.session_state.messages.append(AIMessage(content=reply))
         with st.chat_message("assistant"):
-            st.markdown(local)
-        st.session_state.messages.append(AIMessage(content=local))
+            st.markdown(reply)
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
-                0,
-                SystemMessage(content="You are NeoMind AI, fast and helpful.")
+                0, SystemMessage(content="You are NeoMind AI, fast and helpful.")
             )
             st.session_state.system_added = True
 
         with st.chat_message("assistant"):
             placeholder = st.empty()
-            response = ""
+            full = ""
             for chunk in llm.stream(st.session_state.messages):
                 if chunk.content:
-                    response += chunk.content
-                    placeholder.markdown(response)
+                    full += chunk.content
+                    placeholder.markdown(full)
 
-        st.session_state.messages.append(AIMessage(content=response))
+        st.session_state.messages.append(AIMessage(content=full))
+
