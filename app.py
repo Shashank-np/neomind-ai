@@ -30,10 +30,13 @@ with st.sidebar:
 
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    col1, col2 = st.columns([1.3, 1])
+    col1, col2 = st.columns(2)
 
     with col1:
-        clear = st.button("🧹 Clear Chat", key="clear_chat")
+        if st.button("🧹 Clear Chat"):
+            st.session_state.messages = []
+            st.session_state.system_added = False
+            st.rerun()
 
     with col2:
         toggle = st.toggle("🌙 Dark Mode", value=st.session_state.dark_mode)
@@ -41,18 +44,10 @@ with st.sidebar:
             st.session_state.dark_mode = toggle
             st.rerun()
 
-    if clear:
-        st.session_state.messages = []
-        st.session_state.system_added = False
-        st.rerun()
-
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
-    feedback = st.text_area(
-        "Write your message here…",
-        placeholder="Type your feedback here..."
-    )
+    feedback = st.text_area("Write your message here…", placeholder="Type your feedback here...")
 
     if st.button("Send Feedback"):
         if feedback.strip():
@@ -73,87 +68,84 @@ with st.sidebar:
 
 # ---------------- THEME VARIABLES ----------------
 if st.session_state.dark_mode:
-    bg_gradient = "linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #1f1c2c)"
-    sidebar_bg = "#0f2027"
+    bg_gradient = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
+    sidebar_bg = "#0b1f2a"
     text_color = "#ffffff"
-    muted_text = "#cfd8dc"
-    input_bg = "#1e2a32"
-    input_text = "#ffffff"
-    assistant_bg = "rgba(255,255,255,0.08)"
+    input_bg = "#1e2a33"
+    border_color = "#ffffff"
+    button_bg = "#000000"
+    button_text = "#ffffff"
 else:
-    bg_gradient = "linear-gradient(-45deg, #fdfbfb, #ebedee, #e3edf7, #f6f7f8)"
+    bg_gradient = "linear-gradient(-45deg,#f4f6f8,#eef1f4,#e6ebf0,#f4f6f8)"
     sidebar_bg = "#ffffff"
-    text_color = "#111111"
-    muted_text = "#555555"
+    text_color = "#000000"
     input_bg = "#ffffff"
-    input_text = "#111111"
-    assistant_bg = "rgba(0,0,0,0.06)"
+    border_color = "#000000"
+    button_bg = "#000000"
+    button_text = "#ffffff"
 
-# ---------------- CSS (FIXED CLEAR CHAT BUTTON) ----------------
+# ---------------- GLOBAL CSS FIX ----------------
 st.markdown(f"""
 <style>
-/* MAIN */
+
+/* App background */
 .stApp {{
     background: {bg_gradient};
     background-size: 400% 400%;
-    animation: gradientMove 18s ease infinite;
+    animation: gradientMove 16s ease infinite;
     color: {text_color};
 }}
 
-/* SIDEBAR */
+/* Sidebar */
 [data-testid="stSidebar"] {{
     background: {sidebar_bg};
 }}
-
 [data-testid="stSidebar"] * {{
     color: {text_color} !important;
 }}
 
-/* CLEAR CHAT BUTTON — FIX */
-button[kind="secondary"] {{
-    background-color: #000000 !important;
-    color: #ffffff !important;
+/* Buttons */
+.stButton > button {{
+    background-color: {button_bg} !important;
+    color: {button_text} !important;
     border-radius: 8px;
+    border: 1px solid {border_color};
     font-weight: 600;
 }}
-
-button[kind="secondary"]:hover {{
-    background-color: #111111 !important;
-    color: #ffffff !important;
+.stButton > button:hover {{
+    opacity: 0.9;
 }}
 
-/* INPUTS */
+/* Text area + inputs */
 textarea, input {{
     background-color: {input_bg} !important;
-    color: {input_text} !important;
+    color: {text_color} !important;
+    border: 2px solid {border_color} !important;
     border-radius: 8px;
 }}
 
-textarea::placeholder {{
-    color: {muted_text} !important;
-}}
-
-/* CHAT */
+/* Chat bubbles */
 .stChatMessage[data-testid="stChatMessage-user"] {{
-    background: linear-gradient(135deg, #ff4d4d, #ff7a18);
-    color: black;
+    background: linear-gradient(135deg,#ff4d4d,#ff7a18);
+    color: #000000;
     border-radius: 16px;
     padding: 12px;
 }}
 
 .stChatMessage[data-testid="stChatMessage-assistant"] {{
-    background: {assistant_bg};
+    background: rgba(255,255,255,0.12);
     color: {text_color};
     border-radius: 16px;
     padding: 12px;
 }}
 
-/* ANIMATION */
+/* Animation */
 @keyframes gradientMove {{
-    0% {{ background-position: 0% 50%; }}
-    50% {{ background-position: 100% 50%; }}
-    100% {{ background-position: 0% 50%; }}
+    0% {{background-position: 0% 50%;}}
+    50% {{background-position: 100% 50%;}}
+    100% {{background-position: 0% 50%;}}
 }}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -185,9 +177,9 @@ llm = ChatGroq(
 
 # ---------------- HERO ----------------
 st.markdown("""
-<div style="margin-top:30vh; text-align:center;">
+<div style="margin-top:30vh;text-align:center;">
     <h1>💬 NeoMind AI</h1>
-    <p style="opacity:0.8;">Ask. Think. Generate.</p>
+    <p style="opacity:0.7;">Ask. Think. Generate.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -202,7 +194,6 @@ prompt = st.chat_input("Ask NeoMind AI anything…")
 # ---------------- CHAT HANDLER ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
-
     with st.chat_message("user"):
         st.markdown(prompt)
 
