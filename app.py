@@ -26,7 +26,7 @@ if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
 if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = True
+    st.session_state.dark_mode = True   # DEFAULT = DARK
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
@@ -44,10 +44,10 @@ with st.sidebar:
             st.rerun()
 
     with col2:
-        toggle = st.toggle("🌙 Dark Mode", value=st.session_state.dark_mode)
-        if toggle != st.session_state.dark_mode:
-            st.session_state.dark_mode = toggle
-            st.rerun()
+        st.session_state.dark_mode = st.toggle(
+            "🌙 Dark Mode",
+            value=st.session_state.dark_mode
+        )
 
     st.divider()
     st.subheader("🆘 Help & Feedback")
@@ -71,61 +71,62 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# ---------------- THEME (FAST SWITCH) ----------------
+# ---------------- THEME (INSTANT SWITCH) ----------------
 if st.session_state.dark_mode:
-    bg_gradient = """
-        linear-gradient(-45deg,
-        #0f2027,
-        #203a43,
-        #2c5364,
-        #1f1c2c)
-    """
+    bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
     sidebar_bg = "rgba(0,0,0,0.45)"
-    text_color = "white"
+    text_color = "#ffffff"
+    input_bg = "#1f2933"
     assistant_bg = "rgba(255,255,255,0.08)"
 else:
-    bg_gradient = """
-        linear-gradient(-45deg,
-        #fdfbfb,
-        #ebedee,
-        #dfe9f3,
-        #f6f7f8)
-    """
-    sidebar_bg = "rgba(255,255,255,0.9)"
-    text_color = "#111"
+    bg = "linear-gradient(-45deg,#fdfbfb,#ebedee,#dfe9f3,#f6f7f8)"
+    sidebar_bg = "rgba(255,255,255,0.95)"
+    text_color = "#111111"
+    input_bg = "#ffffff"
     assistant_bg = "rgba(0,0,0,0.06)"
 
 st.markdown(f"""
 <style>
+/* ---------- GLOBAL ---------- */
 .stApp {{
-    background: {bg_gradient};
+    background: {bg};
     background-size: 400% 400%;
-    animation: gradientMove 18s ease infinite;
+    animation: gradientMove 15s ease infinite;
     color: {text_color};
 }}
 
+/* ---------- SIDEBAR ---------- */
 [data-testid="stSidebar"] {{
     background: {sidebar_bg};
     backdrop-filter: blur(14px);
 }}
 
+/* ---------- CHAT INPUT ---------- */
+textarea, input {{
+    background-color: {input_bg} !important;
+    color: {text_color} !important;
+}}
+
+/* ---------- CHAT BUBBLES ---------- */
 .stChatMessage[data-testid="stChatMessage-user"] {{
-    background: linear-gradient(135deg, #ff4d4d, #ff7a18);
+    background: linear-gradient(135deg,#ff4d4d,#ff7a18);
+    color: black;
     border-radius: 16px;
     padding: 12px;
-    color: black;
 }}
 
 .stChatMessage[data-testid="stChatMessage-assistant"] {{
     background: {assistant_bg};
+    color: {text_color};
     border-radius: 16px;
     padding: 12px;
 }}
 
+/* ---------- ANIMATION ---------- */
 @keyframes gradientMove {{
-    0% {{ background-position: 0% 50%; }}
-    50% {{ background-position: 100% 50%; }}
-    100% {{ background-position: 0% 50%; }}
+    0% {{background-position: 0% 50%;}}
+    50% {{background-position: 100% 50%;}}
+    100% {{background-position: 0% 50%;}}
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -158,7 +159,7 @@ llm = ChatGroq(
 
 # ---------------- HERO ----------------
 st.markdown("""
-<div style="margin-top:30vh; text-align:center;">
+<div style="margin-top:30vh;text-align:center;">
     <h1>💬 NeoMind AI</h1>
     <p style="opacity:0.8;">Ask. Think. Generate.</p>
 </div>
