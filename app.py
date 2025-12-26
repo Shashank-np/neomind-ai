@@ -13,11 +13,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- GOOGLE SEARCH CONSOLE ----------------
-st.markdown("""
-<meta name="google-site-verification" content="abc123XYZ456" />
-""", unsafe_allow_html=True)
-
 # ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -26,7 +21,7 @@ if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
 if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = True
+    st.session_state.dark_mode = True  # default
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
@@ -35,26 +30,26 @@ with st.sidebar:
 
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([1, 1])
 
     with col1:
-        if st.button("🧹 Clear Chat"):
+        if st.button("🧹 Clear Chat", key="clear_chat"):
             st.session_state.messages = []
             st.session_state.system_added = False
             st.rerun()
 
     with col2:
-        st.session_state.dark_mode = st.toggle(
-            "🌙 Dark Mode",
-            value=st.session_state.dark_mode
-        )
+        mode = st.toggle("🌙 Dark Mode", value=st.session_state.dark_mode)
+        if mode != st.session_state.dark_mode:
+            st.session_state.dark_mode = mode
+            st.rerun()
 
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
     feedback = st.text_area("Write your message here…")
 
-    if st.button("Send Feedback"):
+    if st.button("Send Feedback", key="send_feedback"):
         if feedback.strip():
             requests.post(
                 "https://formspree.io/f/xblanbjk",
@@ -71,67 +66,52 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# ---------------- THEME VARIABLES ----------------
+# ---------------- THEME ----------------
 if st.session_state.dark_mode:
     bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
-    sidebar_bg = "#0f2027"
-    text = "#ffffff"
-    muted = "#cbd5e1"
+    sidebar_bg = "rgba(0,0,0,0.45)"
+    text_color = "#ffffff"
     button_bg = "#ffffff"
     button_text = "#000000"
     assistant_bg = "rgba(255,255,255,0.08)"
 else:
     bg = "linear-gradient(-45deg,#fdfbfb,#ebedee,#dfe9f3,#f6f7f8)"
-    sidebar_bg = "#ffffff"
-    text = "#111111"
-    muted = "#444444"
+    sidebar_bg = "rgba(255,255,255,0.95)"
+    text_color = "#111111"
     button_bg = "#111111"
     button_text = "#ffffff"
     assistant_bg = "rgba(0,0,0,0.06)"
 
-# ---------------- CSS (CLEAR CHAT FIXED) ----------------
+# ---------------- CSS (FIXED BUTTON VISIBILITY) ----------------
 st.markdown(f"""
 <style>
 
-/* APP */
+/* Main background */
 .stApp {{
     background: {bg};
     background-size: 400% 400%;
-    animation: gradientMove 15s ease infinite;
-    color: {text};
+    animation: gradientMove 18s ease infinite;
+    color: {text_color};
 }}
 
-/* SIDEBAR */
+/* Sidebar */
 [data-testid="stSidebar"] {{
-    background-color: {sidebar_bg};
+    background: {sidebar_bg};
+    backdrop-filter: blur(14px);
 }}
 
-[data-testid="stSidebar"] * {{
-    color: {text};
-}}
-
-[data-testid="stSidebar"] label {{
-    color: {muted};
-}}
-
-/* BUTTON FIX (THIS FIXES CLEAR CHAT) */
+/* Buttons FIX */
 button[kind="secondary"],
 button[kind="primary"] {{
     background-color: {button_bg} !important;
     color: {button_text} !important;
-    border-radius: 8px;
-    font-weight: 600;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
 }}
 
-/* TEXT INPUT */
-textarea, input {{
-    background-color: transparent !important;
-    color: {text} !important;
-}}
-
-/* CHAT */
+/* Chat bubbles */
 .stChatMessage[data-testid="stChatMessage-user"] {{
-    background: linear-gradient(135deg,#ff4d4d,#ff7a18);
+    background: linear-gradient(135deg, #ff4d4d, #ff7a18);
     color: black;
     border-radius: 16px;
     padding: 12px;
@@ -139,16 +119,17 @@ textarea, input {{
 
 .stChatMessage[data-testid="stChatMessage-assistant"] {{
     background: {assistant_bg};
-    color: {text};
     border-radius: 16px;
     padding: 12px;
 }}
 
+/* Animation */
 @keyframes gradientMove {{
-    0% {{background-position: 0% 50%;}}
-    50% {{background-position: 100% 50%;}}
-    100% {{background-position: 0% 50%;}}
+    0% {{ background-position: 0% 50%; }}
+    50% {{ background-position: 100% 50%; }}
+    100% {{ background-position: 0% 50%; }}
 }}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -157,17 +138,15 @@ def smart_answer(prompt: str):
     text = prompt.lower()
     city = "Bengaluru"
 
-    bars = [
-        "Toit – Indiranagar",
-        "Big Pitcher – Indiranagar",
-        "The Biere Club – Lavelle Road",
-        "Skyye – Rooftop Lounge",
-        "Drunken Daddy – Koramangala"
-    ]
-
     if "bar" in text and ("near me" in text or "suggest" in text):
+        bars = [
+            "Toit – Indiranagar",
+            "Big Pitcher – Indiranagar",
+            "The Biere Club – Lavelle Road",
+            "Skyye – Rooftop Lounge",
+            "Drunken Daddy – Koramangala"
+        ]
         return f"### 🍺 Best bars in {city}\n" + "\n".join(f"- {b}" for b in bars)
-
     return None
 
 # ---------------- LLM ----------------
@@ -180,7 +159,7 @@ llm = ChatGroq(
 
 # ---------------- HERO ----------------
 st.markdown("""
-<div style="margin-top:30vh;text-align:center;">
+<div style="margin-top:30vh; text-align:center;">
     <h1>💬 NeoMind AI</h1>
     <p style="opacity:0.8;">Ask. Think. Generate.</p>
 </div>
@@ -210,8 +189,7 @@ if prompt:
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
-                0,
-                SystemMessage(content="You are NeoMind AI, fast and helpful.")
+                0, SystemMessage(content="You are NeoMind AI, fast and helpful.")
             )
             st.session_state.system_added = True
 
