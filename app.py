@@ -89,7 +89,7 @@ else:
     btn_text = "#000000"
     placeholder = "#555555"
 
-# ---------------- CSS (FINAL & MODE-SYNCED) ----------------
+# ---------------- CSS (FINAL FIX) ----------------
 st.markdown(f"""
 <style>
 
@@ -114,26 +114,27 @@ st.markdown(f"""
     border: 2px solid {border} !important;
     border-radius: 10px;
     font-weight: 600;
-    padding: 0.45rem 0.9rem;
 }}
 
-/* 🔥 ASK INPUT – EXACTLY LIKE CLEAR CHAT */
+/* 🔥 ASK INPUT */
 [data-testid="stTextInput"] input {{
     background-color: {input_bg} !important;
     color: {text} !important;
     border: 2px solid {border} !important;
     border-radius: 10px !important;
     padding: 0.55rem 0.9rem !important;
-    font-size: 1rem !important;
-    outline: none !important;
-    box-shadow: none !important;
 }}
 
 [data-testid="stTextInput"] input::placeholder {{
     color: {placeholder} !important;
 }}
 
-/* REMOVE STREAMLIT FRAME */
+/* ✅ FIX: LABEL COLOR (THIS WAS MISSING) */
+[data-testid="stTextInput"] label {{
+    color: {text} !important;
+}}
+
+/* REMOVE FRAME */
 [data-testid="stTextInput"] {{
     background: transparent !important;
     border: none !important;
@@ -148,18 +149,6 @@ textarea {{
 }}
 textarea::placeholder {{
     color: {placeholder} !important;
-}}
-
-/* CHAT */
-.stChatMessage[data-testid="stChatMessage-user"] {{
-    background: linear-gradient(135deg,#ff4d4d,#ff7a18);
-    color: #000;
-    border-radius: 16px;
-}}
-.stChatMessage[data-testid="stChatMessage-assistant"] {{
-    background: rgba(255,255,255,0.15);
-    color: {text};
-    border-radius: 16px;
 }}
 
 </style>
