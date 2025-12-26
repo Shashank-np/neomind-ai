@@ -1,13 +1,10 @@
 import streamlit as st
-from dotenv import load_dotenv
 import os
 import requests
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-# ---------------- LOAD ENV ----------------
-load_dotenv()
-api_key = os.getenv("GROQ_API_KEY")
+api_key = st.secrets["GROQ_API_KEY"]
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -196,3 +193,4 @@ if prompt:
                     placeholder.markdown(full_response)
 
         st.session_state.messages.append(AIMessage(content=full_response))
+
