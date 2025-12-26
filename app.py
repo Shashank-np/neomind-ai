@@ -184,7 +184,7 @@ for msg in st.session_state.messages:
         st.markdown(msg.content)
 
 # ---------------- INPUT ----------------
-prompt = st.chat_input("Ask NeoMind AI anything…")
+prompt = st.text_input("Ask NeoMind AI anything…")
 
 # ---------------- CHAT HANDLER ----------------
 if prompt:
@@ -214,3 +214,4 @@ if prompt:
                     placeholder.markdown(full)
 
         st.session_state.messages.append(AIMessage(content=full))
+
