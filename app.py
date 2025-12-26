@@ -89,7 +89,7 @@ else:
     btn_text = "#000000"
     placeholder = "#555555"
 
-# ---------------- CSS (FINAL & FIXED) ----------------
+# ---------------- CSS (FINAL & MODE-SYNCED) ----------------
 st.markdown(f"""
 <style>
 
@@ -117,9 +117,9 @@ st.markdown(f"""
     padding: 0.45rem 0.9rem;
 }}
 
-/* 🔥 FIX: TEXT INPUT SAME AS CLEAR CHAT */
+/* 🔥 ASK INPUT – EXACTLY LIKE CLEAR CHAT */
 [data-testid="stTextInput"] input {{
-    background: {input_bg} !important;
+    background-color: {input_bg} !important;
     color: {text} !important;
     border: 2px solid {border} !important;
     border-radius: 10px !important;
@@ -133,7 +133,7 @@ st.markdown(f"""
     color: {placeholder} !important;
 }}
 
-/* REMOVE STREAMLIT WHITE FRAME */
+/* REMOVE STREAMLIT FRAME */
 [data-testid="stTextInput"] {{
     background: transparent !important;
     border: none !important;
@@ -199,7 +199,7 @@ for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
 
-# ---------------- INPUT (UNCHANGED LOGIC) ----------------
+# ---------------- INPUT ----------------
 prompt = st.text_input("Ask NeoMind AI anything…")
 
 # ---------------- CHAT HANDLER ----------------
