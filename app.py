@@ -55,7 +55,7 @@ with st.sidebar:
             st.success("✅ Feedback sent!")
         else:
             st.warning("Please write something")
-
+    st.write("-------------------------------")
     st.caption("Created by **Shashank N P**")
 
 # ---------------- THEME VARIABLES ----------------
@@ -253,3 +253,4 @@ if prompt:
                     placeholder_box.markdown(full, unsafe_allow_html=True)
 
         st.session_state.messages.append(AIMessage(content=full))
+
