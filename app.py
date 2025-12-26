@@ -31,7 +31,6 @@ with st.sidebar:
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     col1, col2 = st.columns(2)
-
     with col1:
         if st.button("🧹 Clear Chat"):
             st.session_state.messages = []
@@ -47,19 +46,15 @@ with st.sidebar:
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
-    feedback = st.text_area(
-        "Write your message here…",
-        placeholder="Type your feedback here..."
-    )
-
+    feedback_side = st.text_area("Write your message here…", placeholder="Type your feedback here...")
     if st.button("Send Feedback"):
-        if feedback.strip():
+        if feedback_side.strip():
             requests.post(
                 "https://formspree.io/f/xblanbjk",
                 data={
                     "name": "NeoMind AI User",
                     "email": "no-reply@neomind.ai",
-                    "message": feedback
+                    "message": feedback_side
                 },
                 headers={"Accept": "application/json"}
             )
@@ -69,7 +64,7 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# ---------------- THEME VARIABLES ----------------
+# ---------------- THEME ----------------
 if st.session_state.dark_mode:
     bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
     sidebar_bg = "#0b1f2a"
@@ -92,14 +87,11 @@ else:
 # ---------------- CSS ----------------
 st.markdown(f"""
 <style>
-
-/* APP */
 .stApp {{
     background: {bg};
     color: {text};
 }}
 
-/* SIDEBAR */
 [data-testid="stSidebar"] {{
     background: {sidebar_bg};
 }}
@@ -107,7 +99,6 @@ st.markdown(f"""
     color: {text} !important;
 }}
 
-/* BUTTONS */
 .stButton > button {{
     background: transparent !important;
     color: {text} !important;
@@ -116,65 +107,68 @@ st.markdown(f"""
     font-weight: 600;
 }}
 
-/* CHAT INPUT */
 [data-testid="stChatInput"] textarea {{
     background-color: {input_bg} !important;
     color: {text} !important;
     border: 2px solid {border} !important;
     border-radius: 12px !important;
 }}
-
 [data-testid="stChatInput"] textarea::placeholder {{
     color: {placeholder} !important;
 }}
 
-/* USER MESSAGE */
+.feedback-box textarea {{
+    background-color: {input_bg} !important;
+    color: {text} !important;
+    border: 2px solid {border} !important;
+    border-radius: 12px !important;
+}}
+
 .stChatMessage[data-testid="stChatMessage-user"] {{
     background: {user_bg};
     color: {text};
     border-radius: 14px;
     padding: 12px;
-    margin-left: auto;
 }}
 
-/* ASSISTANT MESSAGE */
 .stChatMessage[data-testid="stChatMessage-assistant"] {{
     background: {ai_bg};
     color: {text};
     border-radius: 14px;
     padding: 12px;
-    margin-right: auto;
 }}
-
 </style>
 """, unsafe_allow_html=True)
-
-# ---------------- SMART LOCAL ANSWER ----------------
-def smart_answer(prompt: str):
-    text = prompt.lower()
-    if "bar" in text and ("near me" in text or "suggest" in text):
-        return """🍺 **Best bars in Bengaluru**
-
-- Toit – Indiranagar  
-- Big Pitcher – Indiranagar  
-- The Biere Club – Lavelle Road  
-- Skyye – Rooftop Lounge  
-- Drunken Daddy – Koramangala
-"""
-    return None
-
-# ---------------- LLM ----------------
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    api_key=api_key,
-    temperature=temperature,
-    streaming=True
-)
 
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
+
+# ---------------- MAIN FEEDBACK BOX (NEW) ----------------
+st.markdown("### 📝 Feedback", unsafe_allow_html=True)
+feedback_main = st.text_area(
+    "",
+    placeholder="Share your feedback about NeoMind AI…",
+    key="main_feedback",
+    help="Your feedback helps improve NeoMind AI"
+)
+
+if st.button("📩 Submit Feedback", key="main_feedback_btn"):
+    if feedback_main.strip():
+        requests.post(
+            "https://formspree.io/f/xblanbjk",
+            data={
+                "name": "NeoMind AI User",
+                "email": "no-reply@neomind.ai",
+                "message": feedback_main
+            },
+            headers={"Accept": "application/json"}
+        )
+        st.success("✅ Thanks for your feedback!")
+        st.session_state.main_feedback = ""
+    else:
+        st.warning("Please write feedback before submitting")
 
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
@@ -185,25 +179,17 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    reply = smart_answer(prompt)
+    with st.chat_message("assistant"):
+        placeholder_box = st.empty()
+        full = ""
+        for chunk in ChatGroq(
+            model="llama-3.3-70b-versatile",
+            api_key=api_key,
+            temperature=temperature,
+            streaming=True
+        ).stream(st.session_state.messages):
+            if chunk.content:
+                full += chunk.content
+                placeholder_box.markdown(full)
 
-    if reply:
-        with st.chat_message("assistant"):
-            st.markdown(reply)
-        st.session_state.messages.append(AIMessage(content=reply))
-    else:
-        if not st.session_state.system_added:
-            st.session_state.messages.insert(
-                0, SystemMessage(content="You are NeoMind AI, fast and helpful.")
-            )
-            st.session_state.system_added = True
-
-        with st.chat_message("assistant"):
-            placeholder_box = st.empty()
-            full = ""
-            for chunk in llm.stream(st.session_state.messages):
-                if chunk.content:
-                    full += chunk.content
-                    placeholder_box.markdown(full)
-
-        st.session_state.messages.append(AIMessage(content=full))
+    st.session_state.messages.append(AIMessage(content=full))
