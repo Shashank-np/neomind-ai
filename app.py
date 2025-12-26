@@ -116,16 +116,23 @@ st.markdown(f"""
     font-weight: 600;
 }}
 
-/* CHAT INPUT */
-[data-testid="stChatInput"] textarea {{
-    background-color: {input_bg} !important;
+/* INPUT BOX (INTEGRATED WITH PAGE) */
+[data-testid="stTextInput"] input {{
+    background: {input_bg} !important;
     color: {text} !important;
     border: 2px solid {border} !important;
     border-radius: 12px !important;
+    padding: 0.6rem 1rem !important;
+    font-size: 1rem !important;
 }}
 
-[data-testid="stChatInput"] textarea::placeholder {{
+[data-testid="stTextInput"] input::placeholder {{
     color: {placeholder} !important;
+}}
+
+[data-testid="stTextInput"] {{
+    background: transparent !important;
+    border: none !important;
 }}
 
 /* USER MESSAGE */
@@ -151,14 +158,12 @@ st.markdown(f"""
 
 # ---------------- SMART LOCAL ANSWER ----------------
 def smart_answer(prompt: str):
-    text = prompt.lower()
-    if "bar" in text and ("near me" in text or "suggest" in text):
-        return """🍺 **Best bars in Bengaluru**
-
-- Toit – Indiranagar  
-- Big Pitcher – Indiranagar  
-- The Biere Club – Lavelle Road  
-- Skyye – Rooftop Lounge  
+    if "bar" in prompt.lower():
+        return """### 🍺 Best bars in Bengaluru
+- Toit – Indiranagar
+- Big Pitcher – Indiranagar
+- The Biere Club – Lavelle Road
+- Skyye – Rooftop Lounge
 - Drunken Daddy – Koramangala
 """
     return None
@@ -176,8 +181,8 @@ for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
 
-# ---------------- CHAT INPUT ----------------
-prompt = st.chat_input("Ask NeoMind AI anything…")
+# ---------------- INPUT ----------------
+prompt = st.text_input("Ask NeoMind AI anything…")
 
 # ---------------- CHAT HANDLER ----------------
 if prompt:
