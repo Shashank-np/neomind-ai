@@ -6,7 +6,6 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 # ---------------- KEYS ----------------
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-MAP_KEY = st.secrets["GOOGLE_MAPS_API_KEY"]
 
 # ---------------- PAGE ----------------
 st.set_page_config(
@@ -143,3 +142,4 @@ if prompt:
                     box.markdown(full)
 
         st.session_state.messages.append(AIMessage(content=full))
+
