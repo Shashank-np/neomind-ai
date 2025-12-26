@@ -1,20 +1,19 @@
 import streamlit as st
 import requests
-from datetime import datetime
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-# ---------------- KEYS ----------------
-GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+# ---------------- API KEY ----------------
+api_key = st.secrets["GROQ_API_KEY"]
 
-# ---------------- PAGE ----------------
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="NeoMind AI",
     page_icon="🧠",
     layout="wide"
 )
 
-# ---------------- SESSION ----------------
+# ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -33,65 +32,77 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# ---------------- LOCATION (IP BASED) ----------------
-def get_user_location():
+# ---------------- CITY DATA ----------------
+BAR_DATA = {
+    "bengaluru": [
+        "Toit – Indiranagar",
+        "Big Pitcher – Indiranagar",
+        "The Biere Club – Lavelle Road",
+        "Skyye – UB City",
+        "Drunken Daddy – Koramangala"
+    ],
+    "bangalore": [
+        "Toit – Indiranagar",
+        "Big Pitcher – Indiranagar",
+        "The Biere Club – Lavelle Road",
+        "Skyye – UB City",
+        "Drunken Daddy – Koramangala"
+    ],
+    "chitradurga": [
+        "Hotel Mayura Bar – Chitradurga",
+        "SLV Bar & Restaurant – Chitradurga",
+        "Naveen Bar – Chitradurga",
+        "Local Permit Room – Chitradurga"
+    ],
+    "mysuru": [
+        "The Road – Radisson Blu",
+        "Purple Haze – Mysuru",
+        "Pelican Pub – Mysuru"
+    ]
+}
+
+# ---------------- GET USER CITY (IP) ----------------
+def get_ip_city():
     try:
-        data = requests.get("https://ipinfo.io/json").json()
-        city = data.get("city")
-        loc = data.get("loc")
-        if city and loc:
-            lat, lng = loc.split(",")
-            return city, lat, lng
+        res = requests.get("https://ipinfo.io/json").json()
+        return res.get("city", "").lower()
     except:
-        pass
-    return None, None, None
+        return ""
 
-# ---------------- GOOGLE MAPS BAR SEARCH ----------------
-def get_nearby_bars(lat, lng):
-    url = (
-        "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-        f"?location={lat},{lng}&radius=5000&type=bar&key={MAP_KEY}"
-    )
-    res = requests.get(url).json()
-    bars = []
-
-    for place in res.get("results", [])[:5]:
-        bars.append(
-            f"- **{place['name']}** ⭐ {place.get('rating','N/A')} | {place.get('vicinity','')}"
-        )
-    return bars
-
-# ---------------- SMART HANDLER ----------------
+# ---------------- SMART ANSWER ----------------
 def smart_answer(prompt):
     text = prompt.lower()
 
-    if "bar" in text:
-        city, lat, lng = get_user_location()
-        now = datetime.now().strftime("%d %b %Y, %I:%M %p")
+    if "bar" not in text:
+        return None
 
-        if not lat:
-            return "❌ Unable to detect your location. Please allow location access."
+    # 1️⃣ Check explicit city in prompt
+    for city in BAR_DATA:
+        if city in text:
+            bars = BAR_DATA[city]
+            return f"""
+🍺 **Best Bars in {city.title()}**
 
-        bars = get_nearby_bars(lat, lng)
+""" + "\n".join([f"- {b}" for b in bars])
 
-        if not bars:
-            return f"❌ No bars found near **{city}**."
+    # 2️⃣ Handle "near me"
+    if "near me" in text:
+        city = get_ip_city()
+        if city in BAR_DATA:
+            bars = BAR_DATA[city]
+            return f"""
+📍 **Bars Near You ({city.title()})**
 
-        return f"""
-🍺 **Best Bars Near You ({city})**
-🕒 *As of {now}*
-
-{chr(10).join(bars)}
-
-📍 Powered by Google Maps
-"""
+""" + "\n".join([f"- {b}" for b in bars])
+        else:
+            return "❌ Sorry, I couldn't find bar data for your location."
 
     return None
 
 # ---------------- LLM ----------------
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
-    api_key=GROQ_API_KEY,
+    api_key=api_key,
     temperature=temperature,
     streaming=True
 )
@@ -109,10 +120,10 @@ for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
 
-# ---------------- INPUT ----------------
+# ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- CHAT ----------------
+# ---------------- CHAT HANDLER ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
 
@@ -125,11 +136,10 @@ if prompt:
         st.session_state.messages.append(AIMessage(content=reply))
         with st.chat_message("assistant"):
             st.markdown(reply)
-
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
-                0, SystemMessage(content="You are NeoMind AI. Be accurate and factual.")
+                0, SystemMessage(content="You are NeoMind AI. Be accurate.")
             )
             st.session_state.system_added = True
 
@@ -142,4 +152,3 @@ if prompt:
                     box.markdown(full)
 
         st.session_state.messages.append(AIMessage(content=full))
-
