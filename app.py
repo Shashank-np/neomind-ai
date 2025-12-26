@@ -74,29 +74,32 @@ if st.session_state.dark_mode:
     bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
     sidebar_bg = "#0b1f2a"
     text = "#ffffff"
-    input_bg = "#000000"
+    input_bg = "#0f2027"
     border = "#ffffff"
-    btn_bg = "#000000"
-    btn_text = "#ffffff"
-    placeholder = "#bbbbbb"
+    placeholder = "#bfc7ce"
+    user_bg = "#2e3f4a"
+    ai_bg = "linear-gradient(135deg,#203a43,#2c5364)"
 else:
     bg = "linear-gradient(-45deg,#f4f6f8,#eef1f4,#e6ebf0,#f4f6f8)"
     sidebar_bg = "#ffffff"
     text = "#000000"
-    input_bg = "#ffffff"
+    input_bg = "#f4f6f8"
     border = "#000000"
-    btn_bg = "#ffffff"
-    btn_text = "#000000"
     placeholder = "#555555"
+    user_bg = "#dfe5ea"
+    ai_bg = "#ffffff"
 
 # ---------------- CSS ----------------
 st.markdown(f"""
 <style>
+
+/* APP */
 .stApp {{
     background: {bg};
     color: {text};
 }}
 
+/* SIDEBAR */
 [data-testid="stSidebar"] {{
     background: {sidebar_bg};
 }}
@@ -104,24 +107,45 @@ st.markdown(f"""
     color: {text} !important;
 }}
 
+/* BUTTONS */
 .stButton > button {{
-    background: {btn_bg} !important;
-    color: {btn_text} !important;
+    background: transparent !important;
+    color: {text} !important;
     border: 2px solid {border} !important;
     border-radius: 10px;
     font-weight: 600;
 }}
 
+/* CHAT INPUT */
 [data-testid="stChatInput"] textarea {{
     background-color: {input_bg} !important;
     color: {text} !important;
     border: 2px solid {border} !important;
-    border-radius: 10px !important;
+    border-radius: 12px !important;
 }}
 
 [data-testid="stChatInput"] textarea::placeholder {{
     color: {placeholder} !important;
 }}
+
+/* USER MESSAGE */
+.stChatMessage[data-testid="stChatMessage-user"] {{
+    background: {user_bg};
+    color: {text};
+    border-radius: 14px;
+    padding: 12px;
+    margin-left: auto;
+}}
+
+/* ASSISTANT MESSAGE */
+.stChatMessage[data-testid="stChatMessage-assistant"] {{
+    background: {ai_bg};
+    color: {text};
+    border-radius: 14px;
+    padding: 12px;
+    margin-right: auto;
+}}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -147,40 +171,30 @@ llm = ChatGroq(
     streaming=True
 )
 
-# ---------------- HERO ----------------
-st.markdown("""
-<div style="margin-top:30vh;text-align:center;">
-    <h1>💬 NeoMind AI</h1>
-    <p style="opacity:0.7;">Ask. Think. Generate.</p>
-</div>
-""", unsafe_allow_html=True)
-
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
-        st.markdown(f"<div style='color:{text}'>{msg.content}</div>", unsafe_allow_html=True)
+        st.markdown(msg.content)
 
-# ---------------- CHAT INPUT (FIXED) ----------------
+# ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 # ---------------- CHAT HANDLER ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
-
     with st.chat_message("user"):
         st.markdown(prompt)
 
     reply = smart_answer(prompt)
 
     if reply:
-        st.session_state.messages.append(AIMessage(content=reply))
         with st.chat_message("assistant"):
-            st.markdown(f"<div style='color:{text}'>{reply}</div>", unsafe_allow_html=True)
+            st.markdown(reply)
+        st.session_state.messages.append(AIMessage(content=reply))
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
-                0,
-                SystemMessage(content="You are NeoMind AI, fast and helpful.")
+                0, SystemMessage(content="You are NeoMind AI, fast and helpful.")
             )
             st.session_state.system_added = True
 
@@ -190,9 +204,6 @@ if prompt:
             for chunk in llm.stream(st.session_state.messages):
                 if chunk.content:
                     full += chunk.content
-                    placeholder_box.markdown(
-                        f"<div style='color:{text}'>{full}</div>",
-                        unsafe_allow_html=True
-                    )
+                    placeholder_box.markdown(full)
 
         st.session_state.messages.append(AIMessage(content=full))
