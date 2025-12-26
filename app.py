@@ -137,12 +137,12 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- TITLE / HERO (FIXED) ----------------
+# ---------------- CENTER TITLE (ONLY) ----------------
 st.markdown(
     f"""
-    <div style="text-align:center; margin-top:20px; margin-bottom:30px;">
-        <h1 style="margin-bottom:5px;">💬 NeoMind AI</h1>
-        <p style="opacity:0.75;">Ask. Think. Generate.</p>
+    <div style="text-align:center; margin-top:40px; margin-bottom:30px;">
+        <h1>💬 NeoMind AI</h1>
+        <p style="opacity:0.7;">Ask. Think. Generate.</p>
     </div>
     """,
     unsafe_allow_html=True
@@ -152,30 +152,6 @@ st.markdown(
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
-
-# ---------------- MAIN FEEDBACK BOX ----------------
-st.markdown("### 📝 Feedback")
-feedback_main = st.text_area(
-    "",
-    placeholder="Share your feedback about NeoMind AI…",
-    key="main_feedback"
-)
-
-if st.button("📩 Submit Feedback"):
-    if feedback_main.strip():
-        requests.post(
-            "https://formspree.io/f/xblanbjk",
-            data={
-                "name": "NeoMind AI User",
-                "email": "no-reply@neomind.ai",
-                "message": feedback_main
-            },
-            headers={"Accept": "application/json"}
-        )
-        st.success("✅ Thanks for your feedback!")
-        st.session_state.main_feedback = ""
-    else:
-        st.warning("Please write feedback before submitting")
 
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
