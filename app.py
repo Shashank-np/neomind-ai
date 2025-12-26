@@ -1,19 +1,21 @@
 import streamlit as st
 import requests
+from datetime import datetime
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-# ---------------- API KEY ----------------
-api_key = st.secrets["GROQ_API_KEY"]
+# ---------------- KEYS ----------------
+GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+MAP_KEY = st.secrets["GOOGLE_MAPS_API_KEY"]
 
-# ---------------- PAGE CONFIG ----------------
+# ---------------- PAGE ----------------
 st.set_page_config(
     page_title="NeoMind AI",
     page_icon="🧠",
     layout="wide"
 )
 
-# ---------------- SESSION STATE ----------------
+# ---------------- SESSION ----------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -23,8 +25,6 @@ if "system_added" not in st.session_state:
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
-    st.caption("Text-based AI Assistant")
-
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
@@ -32,109 +32,67 @@ with st.sidebar:
         st.session_state.system_added = False
         st.rerun()
 
-    st.divider()
-    st.subheader("🆘 Help & Feedback")
-
-    feedback = st.text_area(
-        "Write your message here…",
-        placeholder="Type your feedback here..."
-    )
-
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={
-                    "name": "NeoMind AI User",
-                    "email": "no-reply@neomind.ai",
-                    "message": feedback
-                },
-                headers={"Accept": "application/json"}
-            )
-            st.success("✅ Feedback sent!")
-        else:
-            st.warning("Please write something")
-
     st.caption("Created by **Shashank N P**")
 
-# ---------------- THEME VARIABLES (FIXED DARK MODE) ----------------
-bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
-sidebar_bg = "#0b1f2a"
-text = "#ffffff"
-chat_input_bg = "#000000"
-feedback_bg = "#0f2027"
-border = "#ffffff"
-btn_bg = "#000000"
-btn_text = "#ffffff"
-placeholder = "#bbbbbb"
+# ---------------- LOCATION (IP BASED) ----------------
+def get_user_location():
+    try:
+        data = requests.get("https://ipinfo.io/json").json()
+        city = data.get("city")
+        loc = data.get("loc")
+        if city and loc:
+            lat, lng = loc.split(",")
+            return city, lat, lng
+    except:
+        pass
+    return None, None, None
 
-# ---------------- CSS ----------------
-st.markdown(f"""
-<style>
-.stApp {{
-    background: {bg};
-    color: {text};
-}}
+# ---------------- GOOGLE MAPS BAR SEARCH ----------------
+def get_nearby_bars(lat, lng):
+    url = (
+        "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+        f"?location={lat},{lng}&radius=5000&type=bar&key={MAP_KEY}"
+    )
+    res = requests.get(url).json()
+    bars = []
 
-[data-testid="stSidebar"] {{
-    background: {sidebar_bg};
-}}
-[data-testid="stSidebar"] * {{
-    color: {text} !important;
-}}
+    for place in res.get("results", [])[:5]:
+        bars.append(
+            f"- **{place['name']}** ⭐ {place.get('rating','N/A')} | {place.get('vicinity','')}"
+        )
+    return bars
 
-.stButton > button {{
-    background: {btn_bg} !important;
-    color: {btn_text} !important;
-    border: 2px solid {border} !important;
-    border-radius: 10px;
-    font-weight: 600;
-}}
-
-/* CHAT INPUT */
-[data-testid="stChatInput"] textarea {{
-    background-color: {chat_input_bg} !important;
-    color: {text} !important;
-    border: 2px solid {border} !important;
-    border-radius: 10px !important;
-}}
-
-[data-testid="stChatInput"] textarea::placeholder {{
-    color: {placeholder} !important;
-}}
-
-/* FEEDBACK BOX */
-textarea {{
-    background-color: {feedback_bg} !important;
-    color: {text} !important;
-    border: 2px solid {border} !important;
-    border-radius: 10px !important;
-}}
-
-textarea::placeholder {{
-    color: {placeholder} !important;
-}}
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------- SMART LOCAL ANSWER ----------------
-def smart_answer(prompt: str):
+# ---------------- SMART HANDLER ----------------
+def smart_answer(prompt):
     text = prompt.lower()
-    if "bar" in text and ("near me" in text or "suggest" in text):
-        return """🍺 **Best bars in Bengaluru**
 
-- Toit – Indiranagar  
-- Big Pitcher – Indiranagar  
-- The Biere Club – Lavelle Road  
-- Skyye – Rooftop Lounge  
-- Drunken Daddy – Koramangala
+    if "bar" in text:
+        city, lat, lng = get_user_location()
+        now = datetime.now().strftime("%d %b %Y, %I:%M %p")
+
+        if not lat:
+            return "❌ Unable to detect your location. Please allow location access."
+
+        bars = get_nearby_bars(lat, lng)
+
+        if not bars:
+            return f"❌ No bars found near **{city}**."
+
+        return f"""
+🍺 **Best Bars Near You ({city})**
+🕒 *As of {now}*
+
+{chr(10).join(bars)}
+
+📍 Powered by Google Maps
 """
+
     return None
 
 # ---------------- LLM ----------------
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
-    api_key=api_key,
+    api_key=GROQ_API_KEY,
     temperature=temperature,
     streaming=True
 )
@@ -143,19 +101,19 @@ llm = ChatGroq(
 st.markdown("""
 <div style="margin-top:30vh;text-align:center;">
     <h1>💬 NeoMind AI</h1>
-    <p style="opacity:0.7;">Ask. Think. Generate.</p>
+    <p>Ask. Think. Generate.</p>
 </div>
 """, unsafe_allow_html=True)
 
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
-        st.markdown(f"<div style='color:{text}'>{msg.content}</div>", unsafe_allow_html=True)
+        st.markdown(msg.content)
 
-# ---------------- CHAT INPUT ----------------
+# ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- CHAT HANDLER ----------------
+# ---------------- CHAT ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
 
@@ -167,24 +125,21 @@ if prompt:
     if reply:
         st.session_state.messages.append(AIMessage(content=reply))
         with st.chat_message("assistant"):
-            st.markdown(f"<div style='color:{text}'>{reply}</div>", unsafe_allow_html=True)
+            st.markdown(reply)
+
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
-                0,
-                SystemMessage(content="You are NeoMind AI, fast and helpful.")
+                0, SystemMessage(content="You are NeoMind AI. Be accurate and factual.")
             )
             st.session_state.system_added = True
 
         with st.chat_message("assistant"):
-            placeholder_box = st.empty()
+            box = st.empty()
             full = ""
             for chunk in llm.stream(st.session_state.messages):
                 if chunk.content:
                     full += chunk.content
-                    placeholder_box.markdown(
-                        f"<div style='color:{text}'>{full}</div>",
-                        unsafe_allow_html=True
-                    )
+                    box.markdown(full)
 
         st.session_state.messages.append(AIMessage(content=full))
