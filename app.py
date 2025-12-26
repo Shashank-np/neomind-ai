@@ -74,10 +74,11 @@ if st.session_state.dark_mode:
     bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
     sidebar_bg = "#0b1f2a"
     text = "#ffffff"
-    input_bg = "#1e2a33"
+    input_bg = "#000000"
     border = "#ffffff"
     btn_bg = "#000000"
     btn_text = "#ffffff"
+    placeholder = "#bbbbbb"
 else:
     bg = "linear-gradient(-45deg,#f4f6f8,#eef1f4,#e6ebf0,#f4f6f8)"
     sidebar_bg = "#ffffff"
@@ -86,8 +87,9 @@ else:
     border = "#000000"
     btn_bg = "#ffffff"
     btn_text = "#000000"
+    placeholder = "#555555"
 
-# ---------------- CSS (FINAL FIX) ----------------
+# ---------------- CSS (FINAL & FIXED) ----------------
 st.markdown(f"""
 <style>
 
@@ -105,39 +107,53 @@ st.markdown(f"""
     color: {text} !important;
 }}
 
-/* BUTTONS (CLEAR CHAT + SEND FEEDBACK) */
+/* BUTTONS */
 .stButton > button {{
     background: {btn_bg} !important;
     color: {btn_text} !important;
     border: 2px solid {border} !important;
     border-radius: 10px;
     font-weight: 600;
-    padding: 0.4rem 0.8rem;
-}}
-.stButton > button:hover {{
-    filter: brightness(0.95);
-}}
-.stButton > button:disabled {{
-    opacity: 1 !important;
+    padding: 0.45rem 0.9rem;
 }}
 
-/* TEXTAREA + INPUT */
-textarea, input {{
+/* 🔥 FIX: TEXT INPUT SAME AS CLEAR CHAT */
+[data-testid="stTextInput"] input {{
     background: {input_bg} !important;
     color: {text} !important;
     border: 2px solid {border} !important;
+    border-radius: 10px !important;
+    padding: 0.55rem 0.9rem !important;
+    font-size: 1rem !important;
     outline: none !important;
     box-shadow: none !important;
+}}
+
+[data-testid="stTextInput"] input::placeholder {{
+    color: {placeholder} !important;
+}}
+
+/* REMOVE STREAMLIT WHITE FRAME */
+[data-testid="stTextInput"] {{
+    background: transparent !important;
+    border: none !important;
+}}
+
+/* TEXTAREA */
+textarea {{
+    background: {input_bg} !important;
+    color: {text} !important;
+    border: 2px solid {border} !important;
     border-radius: 10px;
 }}
 textarea::placeholder {{
-    color: {"#bbbbbb" if st.session_state.dark_mode else "#555555"} !important;
+    color: {placeholder} !important;
 }}
 
 /* CHAT */
 .stChatMessage[data-testid="stChatMessage-user"] {{
     background: linear-gradient(135deg,#ff4d4d,#ff7a18);
-    color: #000000;
+    color: #000;
     border-radius: 16px;
 }}
 .stChatMessage[data-testid="stChatMessage-assistant"] {{
@@ -183,7 +199,7 @@ for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
 
-# ---------------- INPUT ----------------
+# ---------------- INPUT (UNCHANGED LOGIC) ----------------
 prompt = st.text_input("Ask NeoMind AI anything…")
 
 # ---------------- CHAT HANDLER ----------------
@@ -214,4 +230,3 @@ if prompt:
                     placeholder.markdown(full)
 
         st.session_state.messages.append(AIMessage(content=full))
-
