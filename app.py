@@ -57,7 +57,7 @@ with st.sidebar:
             st.warning("Please write something")
 
     st.write("-------------------------------")
-    st.markdown("**NeoMind AI • Personal Project**")
+    # st.markdown("**NeoMind AI • Personal Project**")
     st.caption("Created by **Shashank N P**")
 
 # ---------------- THEME VARIABLES ----------------
@@ -255,3 +255,4 @@ if prompt:
                     placeholder_box.markdown(full, unsafe_allow_html=True)
 
         st.session_state.messages.append(AIMessage(content=full))
+
