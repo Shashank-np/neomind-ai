@@ -31,7 +31,6 @@ with st.sidebar:
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     col1, col2 = st.columns(2)
-
     with col1:
         if st.button("🧹 Clear Chat"):
             st.session_state.messages = []
@@ -75,6 +74,8 @@ if st.session_state.dark_mode:
     sidebar_bg = "#0b1f2a"
     text = "#ffffff"
     input_bg = "#000000"
+    chat_input_bg = "#000000"
+    feedback_bg = "#0f2027"
     border = "#ffffff"
     btn_bg = "#000000"
     btn_text = "#ffffff"
@@ -84,6 +85,8 @@ else:
     sidebar_bg = "#ffffff"
     text = "#000000"
     input_bg = "#ffffff"
+    chat_input_bg = "#eef1f4"   # ✅ matches page background
+    feedback_bg = "#eef1f4"     # ✅ visible feedback box
     border = "#000000"
     btn_bg = "#ffffff"
     btn_text = "#000000"
@@ -112,14 +115,27 @@ st.markdown(f"""
     font-weight: 600;
 }}
 
+/* CHAT INPUT */
 [data-testid="stChatInput"] textarea {{
-    background-color: {input_bg} !important;
+    background-color: {chat_input_bg} !important;
     color: {text} !important;
     border: 2px solid {border} !important;
     border-radius: 10px !important;
 }}
 
 [data-testid="stChatInput"] textarea::placeholder {{
+    color: {placeholder} !important;
+}}
+
+/* FEEDBACK BOX */
+textarea {{
+    background-color: {feedback_bg} !important;
+    color: {text} !important;
+    border: 2px solid {border} !important;
+    border-radius: 10px !important;
+}}
+
+textarea::placeholder {{
     color: {placeholder} !important;
 }}
 </style>
@@ -160,7 +176,7 @@ for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(f"<div style='color:{text}'>{msg.content}</div>", unsafe_allow_html=True)
 
-# ---------------- CHAT INPUT (FIXED) ----------------
+# ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 # ---------------- CHAT HANDLER ----------------
