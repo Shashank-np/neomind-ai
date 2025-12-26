@@ -13,6 +13,11 @@ st.set_page_config(
     layout="wide"
 )
 
+# ---------------- GOOGLE SEARCH CONSOLE VERIFICATION ----------------
+st.markdown("""
+<meta name="google-site-verification" content="abc123XYZ456" />
+""", unsafe_allow_html=True)
+
 # ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -66,7 +71,7 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# ---------------- ANIMATED THEME ----------------
+# ---------------- THEME (FAST SWITCH) ----------------
 if st.session_state.dark_mode:
     bg_gradient = """
         linear-gradient(-45deg,
@@ -92,8 +97,6 @@ else:
 
 st.markdown(f"""
 <style>
-
-/* ---------- MAIN BACKGROUND ---------- */
 .stApp {{
     background: {bg_gradient};
     background-size: 400% 400%;
@@ -101,13 +104,11 @@ st.markdown(f"""
     color: {text_color};
 }}
 
-/* ---------- SIDEBAR ---------- */
 [data-testid="stSidebar"] {{
     background: {sidebar_bg};
     backdrop-filter: blur(14px);
 }}
 
-/* ---------- CHAT BUBBLES ---------- */
 .stChatMessage[data-testid="stChatMessage-user"] {{
     background: linear-gradient(135deg, #ff4d4d, #ff7a18);
     border-radius: 16px;
@@ -121,13 +122,11 @@ st.markdown(f"""
     padding: 12px;
 }}
 
-/* ---------- ANIMATION ---------- */
 @keyframes gradientMove {{
     0% {{ background-position: 0% 50%; }}
     50% {{ background-position: 100% 50%; }}
     100% {{ background-position: 0% 50%; }}
 }}
-
 </style>
 """, unsafe_allow_html=True)
 
