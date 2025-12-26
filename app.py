@@ -46,7 +46,11 @@ with st.sidebar:
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
-    feedback_side = st.text_area("Write your message here…", placeholder="Type your feedback here...")
+    feedback_side = st.text_area(
+        "Write your message here…",
+        placeholder="Type your feedback here..."
+    )
+
     if st.button("Send Feedback"):
         if feedback_side.strip():
             requests.post(
@@ -117,13 +121,6 @@ st.markdown(f"""
     color: {placeholder} !important;
 }}
 
-.feedback-box textarea {{
-    background-color: {input_bg} !important;
-    color: {text} !important;
-    border: 2px solid {border} !important;
-    border-radius: 12px !important;
-}}
-
 .stChatMessage[data-testid="stChatMessage-user"] {{
     background: {user_bg};
     color: {text};
@@ -140,21 +137,31 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
+# ---------------- TITLE / HERO (FIXED) ----------------
+st.markdown(
+    f"""
+    <div style="text-align:center; margin-top:20px; margin-bottom:30px;">
+        <h1 style="margin-bottom:5px;">💬 NeoMind AI</h1>
+        <p style="opacity:0.75;">Ask. Think. Generate.</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
 
-# ---------------- MAIN FEEDBACK BOX (NEW) ----------------
-st.markdown("### 📝 Feedback", unsafe_allow_html=True)
+# ---------------- MAIN FEEDBACK BOX ----------------
+st.markdown("### 📝 Feedback")
 feedback_main = st.text_area(
     "",
     placeholder="Share your feedback about NeoMind AI…",
-    key="main_feedback",
-    help="Your feedback helps improve NeoMind AI"
+    key="main_feedback"
 )
 
-if st.button("📩 Submit Feedback", key="main_feedback_btn"):
+if st.button("📩 Submit Feedback"):
     if feedback_main.strip():
         requests.post(
             "https://formspree.io/f/xblanbjk",
@@ -176,18 +183,22 @@ prompt = st.chat_input("Ask NeoMind AI anything…")
 # ---------------- CHAT HANDLER ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
+
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
         placeholder_box = st.empty()
         full = ""
-        for chunk in ChatGroq(
+
+        llm = ChatGroq(
             model="llama-3.3-70b-versatile",
             api_key=api_key,
             temperature=temperature,
             streaming=True
-        ).stream(st.session_state.messages):
+        )
+
+        for chunk in llm.stream(st.session_state.messages):
             if chunk.content:
                 full += chunk.content
                 placeholder_box.markdown(full)
