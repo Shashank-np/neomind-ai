@@ -55,7 +55,9 @@ with st.sidebar:
             st.success("✅ Feedback sent!")
         else:
             st.warning("Please write something")
+
     st.write("-------------------------------")
+    st.markdown("**NeoMind AI • Personal Project**")
     st.caption("Created by **Shashank N P**")
 
 # ---------------- THEME VARIABLES ----------------
@@ -203,7 +205,7 @@ for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content, unsafe_allow_html=True)
 
-# ---------------- AUTO SCROLL (NEW) ----------------
+# ---------------- AUTO SCROLL ----------------
 def scroll_to_bottom():
     st.markdown(
         """
@@ -253,4 +255,3 @@ if prompt:
                     placeholder_box.markdown(full, unsafe_allow_html=True)
 
         st.session_state.messages.append(AIMessage(content=full))
-
