@@ -58,6 +58,64 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
+# ---------------- THEME VARIABLES ----------------
+bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
+sidebar_bg = "#0b1f2a"
+text = "#ffffff"
+chat_input_bg = "#000000"
+feedback_bg = "#0f2027"
+border = "#ffffff"
+btn_bg = "#000000"
+btn_text = "#ffffff"
+placeholder = "#bbbbbb"
+
+# ---------------- CSS ----------------
+st.markdown(f"""
+<style>
+.stApp {{
+    background: {bg};
+    color: {text};
+}}
+
+[data-testid="stSidebar"] {{
+    background: {sidebar_bg};
+}}
+[data-testid="stSidebar"] * {{
+    color: {text} !important;
+}}
+
+.stButton > button {{
+    background: {btn_bg} !important;
+    color: {btn_text} !important;
+    border: 2px solid {border} !important;
+    border-radius: 10px;
+    font-weight: 600;
+}}
+
+[data-testid="stChatInput"] textarea {{
+    background-color: {chat_input_bg} !important;
+    color: {text} !important;
+    border: 2px solid {border} !important;
+    border-radius: 10px !important;
+}}
+
+[data-testid="stChatInput"] textarea::placeholder {{
+    color: {placeholder} !important;
+}}
+
+textarea {{
+    background-color: {feedback_bg} !important;
+    color: {text} !important;
+    border: 2px solid {border} !important;
+    border-radius: 10px !important;
+}}
+
+textarea::placeholder {{
+    color: {placeholder} !important;
+}}
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------- CITY DATA ----------------
 BAR_DATA = {
     "bengaluru": [
@@ -87,7 +145,7 @@ BAR_DATA = {
     ]
 }
 
-# ---------------- GET IP CITY ----------------
+# ---------------- IP LOCATION ----------------
 def get_ip_city():
     try:
         res = requests.get("https://ipinfo.io/json", timeout=5).json()
@@ -95,39 +153,33 @@ def get_ip_city():
     except:
         return ""
 
-# ---------------- SMART LOCAL ANSWER (FIXED) ----------------
+# ---------------- SMART ANSWER ----------------
 def smart_answer(prompt: str):
     text = prompt.lower()
-
     if "bar" not in text:
         return None
 
     now = datetime.now().strftime("%d %b %Y | %I:%M %p")
 
-    # 1️⃣ Explicit city in prompt
     for city in BAR_DATA:
         if city in text:
-            bars = BAR_DATA[city]
             return f"""
 🍺 **Best Bars in {city.title()}**
 🕒 {now}
 
-""" + "\n".join([f"- {b}" for b in bars])
+""" + "\n".join([f"- {b}" for b in BAR_DATA[city]])
 
-    # 2️⃣ "Near me" → IP location
     if "near me" in text:
         city = get_ip_city()
         if city in BAR_DATA:
-            bars = BAR_DATA[city]
             return f"""
 📍 **Bars Near You ({city.title()})**
 🕒 {now}
 
-""" + "\n".join([f"- {b}" for b in bars])
+""" + "\n".join([f"- {b}" for b in BAR_DATA[city]])
         else:
             return "❌ Sorry, I couldn't find bar data for your location."
 
-    # 3️⃣ Let LLM handle everything else
     return None
 
 # ---------------- LLM ----------------
@@ -150,6 +202,23 @@ st.markdown("""
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content, unsafe_allow_html=True)
+
+# ---------------- AUTO SCROLL (NEW) ----------------
+def scroll_to_bottom():
+    st.markdown(
+        """
+        <script>
+        var element = document.getElementById("bottom-anchor");
+        if (element) {
+            element.scrollIntoView({behavior: "smooth"});
+        }
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
+
+st.markdown('<div id="bottom-anchor"></div>', unsafe_allow_html=True)
+scroll_to_bottom()
 
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
