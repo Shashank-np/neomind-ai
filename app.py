@@ -20,9 +20,6 @@ if "messages" not in st.session_state:
 if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = True
-
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
@@ -30,18 +27,10 @@ with st.sidebar:
 
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🧹 Clear Chat"):
-            st.session_state.messages = []
-            st.session_state.system_added = False
-            st.rerun()
-
-    with col2:
-        toggle = st.toggle("🌙 Dark Mode", value=st.session_state.dark_mode)
-        if toggle != st.session_state.dark_mode:
-            st.session_state.dark_mode = toggle
-            st.rerun()
+    if st.button("🧹 Clear Chat"):
+        st.session_state.messages = []
+        st.session_state.system_added = False
+        st.rerun()
 
     st.divider()
     st.subheader("🆘 Help & Feedback")
@@ -68,29 +57,16 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# ---------------- THEME VARIABLES ----------------
-if st.session_state.dark_mode:
-    bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
-    sidebar_bg = "#0b1f2a"
-    text = "#ffffff"
-    input_bg = "#000000"
-    chat_input_bg = "#000000"
-    feedback_bg = "#0f2027"
-    border = "#ffffff"
-    btn_bg = "#000000"
-    btn_text = "#ffffff"
-    placeholder = "#bbbbbb"
-else:
-    bg = "linear-gradient(-45deg,#f4f6f8,#eef1f4,#e6ebf0,#f4f6f8)"
-    sidebar_bg = "#ffffff"
-    text = "#000000"
-    input_bg = "#ffffff"
-    chat_input_bg = "#eef1f4"   # ✅ matches page background
-    feedback_bg = "#eef1f4"     # ✅ visible feedback box
-    border = "#000000"
-    btn_bg = "#ffffff"
-    btn_text = "#000000"
-    placeholder = "#555555"
+# ---------------- THEME VARIABLES (FIXED DARK MODE) ----------------
+bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
+sidebar_bg = "#0b1f2a"
+text = "#ffffff"
+chat_input_bg = "#000000"
+feedback_bg = "#0f2027"
+border = "#ffffff"
+btn_bg = "#000000"
+btn_text = "#ffffff"
+placeholder = "#bbbbbb"
 
 # ---------------- CSS ----------------
 st.markdown(f"""
