@@ -3,20 +3,17 @@ import requests
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-# --------------------------------------------------
-# CONFIG
-# --------------------------------------------------
+# ---------------- API KEY ----------------
+api_key = st.secrets["GROQ_API_KEY"]
+
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="NeoMind AI",
     page_icon="🧠",
     layout="wide"
 )
 
-api_key = st.secrets["GROQ_API_KEY"]
-
-# --------------------------------------------------
-# SESSION STATE
-# --------------------------------------------------
+# ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -26,98 +23,7 @@ if "system_added" not in st.session_state:
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = True
 
-# --------------------------------------------------
-# THEME VARIABLES
-# --------------------------------------------------
-if st.session_state.dark_mode:
-    BG = "#0b1f2a"
-    SIDEBAR = "#071922"
-    TEXT = "#ffffff"
-    INPUT_BG = "#1e2a33"
-    BORDER = "#ffffff"
-    BTN_BG = "#000000"
-else:
-    BG = "#f2f4f7"
-    SIDEBAR = "#ffffff"
-    TEXT = "#000000"
-    INPUT_BG = "#ffffff"
-    BORDER = "#000000"
-    BTN_BG = "#000000"
-
-# --------------------------------------------------
-# GLOBAL CSS (FIXES EVERYTHING)
-# --------------------------------------------------
-st.markdown(f"""
-<style>
-
-/* APP */
-.stApp {{
-    background: {BG};
-    color: {TEXT};
-}}
-
-/* SIDEBAR */
-[data-testid="stSidebar"] {{
-    background: {SIDEBAR};
-}}
-[data-testid="stSidebar"] * {{
-    color: {TEXT} !important;
-}}
-
-/* BUTTONS */
-.stButton > button {{
-    background: {BTN_BG};
-    color: #ffffff !important;
-    border-radius: 8px;
-    border: 1px solid {BORDER};
-    font-weight: 600;
-}}
-
-/* TEXTAREA + INPUT */
-textarea, input {{
-    background: {INPUT_BG} !important;
-    color: {TEXT} !important;
-    border: 2px solid {BORDER} !important;
-    border-radius: 8px;
-}}
-
-/* CHAT INPUT — REMOVE DOUBLE FRAME */
-div[data-testid="stChatInput"] {{
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-}}
-
-div[data-testid="stChatInput"] textarea {{
-    background: {INPUT_BG} !important;
-    color: {TEXT} !important;
-    border: 2px solid {BORDER} !important;
-    border-radius: 14px !important;
-    padding: 14px 18px !important;
-}}
-
-/* CHAT BUBBLES */
-.stChatMessage[data-testid="stChatMessage-user"] {{
-    background: linear-gradient(135deg,#ff4d4d,#ff7a18);
-    color: #000000;
-    border-radius: 16px;
-    padding: 12px;
-}}
-
-.stChatMessage[data-testid="stChatMessage-assistant"] {{
-    background: rgba(255,255,255,0.12);
-    color: {TEXT};
-    border-radius: 16px;
-    padding: 12px;
-}}
-
-</style>
-""", unsafe_allow_html=True)
-
-# --------------------------------------------------
-# SIDEBAR
-# --------------------------------------------------
+# ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
     st.caption("Text-based AI Assistant")
@@ -139,8 +45,8 @@ with st.sidebar:
             st.rerun()
 
     st.divider()
-
     st.subheader("🆘 Help & Feedback")
+
     feedback = st.text_area(
         "Write your message here…",
         placeholder="Type your feedback here..."
@@ -163,21 +69,100 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# --------------------------------------------------
-# SMART LOCAL ANSWER
-# --------------------------------------------------
+# ---------------- THEME VARIABLES ----------------
+if st.session_state.dark_mode:
+    bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
+    sidebar_bg = "#0b1f2a"
+    text = "#ffffff"
+    input_bg = "#1e2a33"
+    border = "#ffffff"
+    btn_bg = "#000000"
+    btn_text = "#ffffff"
+else:
+    bg = "linear-gradient(-45deg,#f4f6f8,#eef1f4,#e6ebf0,#f4f6f8)"
+    sidebar_bg = "#ffffff"
+    text = "#000000"
+    input_bg = "#ffffff"
+    border = "#000000"
+    btn_bg = "#ffffff"
+    btn_text = "#000000"
+
+# ---------------- CSS (FINAL FIX) ----------------
+st.markdown(f"""
+<style>
+
+/* APP */
+.stApp {{
+    background: {bg};
+    color: {text};
+}}
+
+/* SIDEBAR */
+[data-testid="stSidebar"] {{
+    background: {sidebar_bg};
+}}
+[data-testid="stSidebar"] * {{
+    color: {text} !important;
+}}
+
+/* BUTTONS (CLEAR CHAT + SEND FEEDBACK) */
+.stButton > button {{
+    background: {btn_bg} !important;
+    color: {btn_text} !important;
+    border: 2px solid {border} !important;
+    border-radius: 10px;
+    font-weight: 600;
+    padding: 0.4rem 0.8rem;
+}}
+.stButton > button:hover {{
+    filter: brightness(0.95);
+}}
+.stButton > button:disabled {{
+    opacity: 1 !important;
+}}
+
+/* TEXTAREA + INPUT */
+textarea, input {{
+    background: {input_bg} !important;
+    color: {text} !important;
+    border: 2px solid {border} !important;
+    outline: none !important;
+    box-shadow: none !important;
+    border-radius: 10px;
+}}
+textarea::placeholder {{
+    color: {"#bbbbbb" if st.session_state.dark_mode else "#555555"} !important;
+}}
+
+/* CHAT */
+.stChatMessage[data-testid="stChatMessage-user"] {{
+    background: linear-gradient(135deg,#ff4d4d,#ff7a18);
+    color: #000000;
+    border-radius: 16px;
+}}
+.stChatMessage[data-testid="stChatMessage-assistant"] {{
+    background: rgba(255,255,255,0.15);
+    color: {text};
+    border-radius: 16px;
+}}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- SMART LOCAL ANSWER ----------------
 def smart_answer(prompt: str):
-    if "bar" in prompt.lower():
+    text = prompt.lower()
+    if "bar" in text and ("near me" in text or "suggest" in text):
         return """### 🍺 Best bars in Bengaluru
 - Toit – Indiranagar
 - Big Pitcher – Indiranagar
+- The Biere Club – Lavelle Road
 - Skyye – Rooftop Lounge
-- Drunken Daddy – Koramangala"""
+- Drunken Daddy – Koramangala
+"""
     return None
 
-# --------------------------------------------------
-# LLM
-# --------------------------------------------------
+# ---------------- LLM ----------------
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
     api_key=api_key,
@@ -185,39 +170,34 @@ llm = ChatGroq(
     streaming=True
 )
 
-# --------------------------------------------------
-# HERO
-# --------------------------------------------------
-if not st.session_state.messages:
-    st.markdown("""
-    <div style="margin-top:30vh;text-align:center;">
-        <h1>💬 NeoMind AI</h1>
-        <p style="opacity:0.7;">Ask. Think. Generate.</p>
-    </div>
-    """, unsafe_allow_html=True)
+# ---------------- HERO ----------------
+st.markdown("""
+<div style="margin-top:30vh;text-align:center;">
+    <h1>💬 NeoMind AI</h1>
+    <p style="opacity:0.7;">Ask. Think. Generate.</p>
+</div>
+""", unsafe_allow_html=True)
 
-# --------------------------------------------------
-# CHAT HISTORY
-# --------------------------------------------------
+# ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
 
-# --------------------------------------------------
-# INPUT
-# --------------------------------------------------
-prompt = st.chat_input("Ask NeoMind AI anything...")
+# ---------------- INPUT ----------------
+prompt = st.chat_input("Ask NeoMind AI anything…")
 
+# ---------------- CHAT HANDLER ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    local = smart_answer(prompt)
-    if local:
+    reply = smart_answer(prompt)
+
+    if reply:
+        st.session_state.messages.append(AIMessage(content=reply))
         with st.chat_message("assistant"):
-            st.markdown(local)
-        st.session_state.messages.append(AIMessage(content=local))
+            st.markdown(reply)
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
@@ -227,10 +207,10 @@ if prompt:
 
         with st.chat_message("assistant"):
             placeholder = st.empty()
-            response = ""
+            full = ""
             for chunk in llm.stream(st.session_state.messages):
                 if chunk.content:
-                    response += chunk.content
-                    placeholder.markdown(response)
+                    full += chunk.content
+                    placeholder.markdown(full)
 
-        st.session_state.messages.append(AIMessage(content=response))
+        st.session_state.messages.append(AIMessage(content=full))
