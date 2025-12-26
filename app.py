@@ -13,11 +13,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- GOOGLE SEARCH CONSOLE VERIFICATION ----------------
-st.markdown("""
-<meta name="google-site-verification" content="abc123XYZ456" />
-""", unsafe_allow_html=True)
-
 # ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -35,19 +30,21 @@ with st.sidebar:
 
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    col1, col2 = st.columns([1.2, 1])
+    col1, col2 = st.columns([1.3, 1])
 
     with col1:
-        if st.button("🧹 Clear Chat"):
-            st.session_state.messages = []
-            st.session_state.system_added = False
-            st.rerun()
+        clear = st.button("🧹 Clear Chat", key="clear_chat")
 
     with col2:
         toggle = st.toggle("🌙 Dark Mode", value=st.session_state.dark_mode)
         if toggle != st.session_state.dark_mode:
             st.session_state.dark_mode = toggle
             st.rerun()
+
+    if clear:
+        st.session_state.messages = []
+        st.session_state.system_added = False
+        st.rerun()
 
     st.divider()
     st.subheader("🆘 Help & Feedback")
@@ -92,7 +89,7 @@ else:
     input_text = "#111111"
     assistant_bg = "rgba(0,0,0,0.06)"
 
-# ---------------- GLOBAL CSS FIX ----------------
+# ---------------- CSS (FIXED CLEAR CHAT BUTTON) ----------------
 st.markdown(f"""
 <style>
 /* MAIN */
@@ -112,7 +109,20 @@ st.markdown(f"""
     color: {text_color} !important;
 }}
 
-/* INPUTS & TEXT AREAS */
+/* CLEAR CHAT BUTTON — FIX */
+button[kind="secondary"] {{
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border-radius: 8px;
+    font-weight: 600;
+}}
+
+button[kind="secondary"]:hover {{
+    background-color: #111111 !important;
+    color: #ffffff !important;
+}}
+
+/* INPUTS */
 textarea, input {{
     background-color: {input_bg} !important;
     color: {input_text} !important;
@@ -123,12 +133,7 @@ textarea::placeholder {{
     color: {muted_text} !important;
 }}
 
-/* BUTTONS */
-button {{
-    color: white !important;
-}}
-
-/* CHAT BUBBLES */
+/* CHAT */
 .stChatMessage[data-testid="stChatMessage-user"] {{
     background: linear-gradient(135deg, #ff4d4d, #ff7a18);
     color: black;
