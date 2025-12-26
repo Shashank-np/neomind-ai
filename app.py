@@ -21,9 +21,9 @@ if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
 if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = True   # default dark
+    st.session_state.dark_mode = True
 
-# ---------------- SIDEBAR (TOGGLE FIRST) ----------------
+# ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
     st.caption("Text-based AI Assistant")
@@ -39,10 +39,10 @@ with st.sidebar:
             st.rerun()
 
     with col2:
-        new_mode = st.toggle("🌙 Dark Mode", value=st.session_state.dark_mode)
-        if new_mode != st.session_state.dark_mode:
-            st.session_state.dark_mode = new_mode
-            st.rerun()   # ⚡ instant switch
+        toggle = st.toggle("🌙 Dark Mode", value=st.session_state.dark_mode)
+        if toggle != st.session_state.dark_mode:
+            st.session_state.dark_mode = toggle
+            st.rerun()
 
     st.divider()
     st.subheader("🆘 Help & Feedback")
@@ -66,30 +66,48 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# ---------------- THEME (NO ANIMATION = FAST) ----------------
+# ---------------- ANIMATED THEME ----------------
 if st.session_state.dark_mode:
-    bg = "#0f2027"
-    sidebar_bg = "rgba(0,0,0,0.35)"
+    bg_gradient = """
+        linear-gradient(-45deg,
+        #0f2027,
+        #203a43,
+        #2c5364,
+        #1f1c2c)
+    """
+    sidebar_bg = "rgba(0,0,0,0.45)"
     text_color = "white"
     assistant_bg = "rgba(255,255,255,0.08)"
 else:
-    bg = "#f4f4f4"
-    sidebar_bg = "rgba(255,255,255,0.8)"
+    bg_gradient = """
+        linear-gradient(-45deg,
+        #fdfbfb,
+        #ebedee,
+        #dfe9f3,
+        #f6f7f8)
+    """
+    sidebar_bg = "rgba(255,255,255,0.9)"
     text_color = "#111"
     assistant_bg = "rgba(0,0,0,0.06)"
 
 st.markdown(f"""
 <style>
+
+/* ---------- MAIN BACKGROUND ---------- */
 .stApp {{
-    background-color: {bg};
+    background: {bg_gradient};
+    background-size: 400% 400%;
+    animation: gradientMove 18s ease infinite;
     color: {text_color};
 }}
 
+/* ---------- SIDEBAR ---------- */
 [data-testid="stSidebar"] {{
     background: {sidebar_bg};
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(14px);
 }}
 
+/* ---------- CHAT BUBBLES ---------- */
 .stChatMessage[data-testid="stChatMessage-user"] {{
     background: linear-gradient(135deg, #ff4d4d, #ff7a18);
     border-radius: 16px;
@@ -102,6 +120,14 @@ st.markdown(f"""
     border-radius: 16px;
     padding: 12px;
 }}
+
+/* ---------- ANIMATION ---------- */
+@keyframes gradientMove {{
+    0% {{ background-position: 0% 50%; }}
+    50% {{ background-position: 100% 50%; }}
+    100% {{ background-position: 0% 50%; }}
+}}
+
 </style>
 """, unsafe_allow_html=True)
 
