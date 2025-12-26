@@ -1,10 +1,9 @@
 import streamlit as st
-import os
 import requests
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-# ---------------- API KEY (STREAMLIT CLOUD) ----------------
+# ---------------- API KEY ----------------
 api_key = st.secrets["GROQ_API_KEY"]
 
 # ---------------- PAGE CONFIG ----------------
@@ -21,100 +20,10 @@ if "messages" not in st.session_state:
 if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
-if "theme" not in st.session_state:
-    st.session_state.theme = "dark"
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = True   # default dark
 
-# ---------------- CSS (UNCHANGED UI + THEME SUPPORT) ----------------
-st.markdown(f"""
-<style>
-:root {{
-    --bg-gradient: {"linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #1f1c2c)" if st.session_state.theme == "dark"
-    else "linear-gradient(-45deg, #f7f7f7, #eaeaea, #dcdcdc, #f7f7f7)"};
-    --text-color: {"white" if st.session_state.theme == "dark" else "#111"};
-}}
-
-.stApp {{
-    background: var(--bg-gradient);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
-    color: var(--text-color);
-}}
-
-@keyframes gradientBG {{
-    0% {{background-position: 0% 50%;}}
-    50% {{background-position: 100% 50%;}}
-    100% {{background-position: 0% 50%;}}
-}}
-
-[data-testid="stSidebar"] {{
-    background: rgba(0,0,0,0.35);
-    backdrop-filter: blur(12px);
-}}
-
-.stChatMessage[data-testid="stChatMessage-user"] {{
-    background: linear-gradient(135deg, #ff4d4d, #ff7a18);
-    border-radius: 16px;
-    padding: 12px;
-    color: black;
-}}
-
-.stChatMessage[data-testid="stChatMessage-assistant"] {{
-    background: rgba(255,255,255,0.08);
-    border-radius: 16px;
-    padding: 12px;
-}}
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------- SMART CHATGPT-LIKE LOGIC ----------------
-def smart_answer(prompt: str):
-    text = prompt.lower()
-    city = "Bengaluru"
-
-    knowledge = {
-        "bar": [
-            "Toit – Indiranagar",
-            "Big Pitcher – Indiranagar",
-            "The Biere Club – Lavelle Road",
-            "Skyye – Rooftop Lounge",
-            "Drunken Daddy – Koramangala"
-        ],
-        "restaurant": [
-            "Meghana Foods",
-            "Truffles",
-            "Empire Restaurant",
-            "Absolute Barbeque",
-            "MTR"
-        ],
-        "cafe": [
-            "Third Wave Coffee",
-            "Glen's Bakehouse",
-            "The Hole in the Wall Cafe",
-            "Cafe Noir",
-            "Blue Tokai Coffee"
-        ],
-        "places": [
-            "Lalbagh Botanical Garden",
-            "Cubbon Park",
-            "Bangalore Palace",
-            "ISKCON Temple",
-            "Nandi Hills"
-        ]
-    }
-
-    for key, items in knowledge.items():
-        if key in text and ("near me" in text or "suggest" in text or "best" in text):
-            formatted = "\n".join(f"- {i}" for i in items)
-            return f"""
-Here are some popular **{key}s in {city}** you might like:
-
-{formatted}
-
-👉 Want suggestions for a **different city**? Just tell me the city name.
-"""
-    return None
-
-# ---------------- SIDEBAR ----------------
+# ---------------- SIDEBAR (TOGGLE FIRST) ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
     st.caption("Text-based AI Assistant")
@@ -130,11 +39,10 @@ with st.sidebar:
             st.rerun()
 
     with col2:
-        theme_toggle = st.toggle(
-            "🌙 Dark / ☀️ Light",
-            value=(st.session_state.theme == "dark")
-        )
-        st.session_state.theme = "dark" if theme_toggle else "light"
+        new_mode = st.toggle("🌙 Dark Mode", value=st.session_state.dark_mode)
+        if new_mode != st.session_state.dark_mode:
+            st.session_state.dark_mode = new_mode
+            st.rerun()   # ⚡ instant switch
 
     st.divider()
     st.subheader("🆘 Help & Feedback")
@@ -152,12 +60,68 @@ with st.sidebar:
                 },
                 headers={"Accept": "application/json"}
             )
-            st.success("✅ Feedback sent to your email!")
+            st.success("✅ Feedback sent!")
         else:
             st.warning("Please write something")
 
-    st.divider()
     st.caption("Created by **Shashank N P**")
+
+# ---------------- THEME (NO ANIMATION = FAST) ----------------
+if st.session_state.dark_mode:
+    bg = "#0f2027"
+    sidebar_bg = "rgba(0,0,0,0.35)"
+    text_color = "white"
+    assistant_bg = "rgba(255,255,255,0.08)"
+else:
+    bg = "#f4f4f4"
+    sidebar_bg = "rgba(255,255,255,0.8)"
+    text_color = "#111"
+    assistant_bg = "rgba(0,0,0,0.06)"
+
+st.markdown(f"""
+<style>
+.stApp {{
+    background-color: {bg};
+    color: {text_color};
+}}
+
+[data-testid="stSidebar"] {{
+    background: {sidebar_bg};
+    backdrop-filter: blur(12px);
+}}
+
+.stChatMessage[data-testid="stChatMessage-user"] {{
+    background: linear-gradient(135deg, #ff4d4d, #ff7a18);
+    border-radius: 16px;
+    padding: 12px;
+    color: black;
+}}
+
+.stChatMessage[data-testid="stChatMessage-assistant"] {{
+    background: {assistant_bg};
+    border-radius: 16px;
+    padding: 12px;
+}}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- SMART LOCAL ANSWER ----------------
+def smart_answer(prompt: str):
+    text = prompt.lower()
+    city = "Bengaluru"
+
+    bars = [
+        "Toit – Indiranagar",
+        "Big Pitcher – Indiranagar",
+        "The Biere Club – Lavelle Road",
+        "Skyye – Rooftop Lounge",
+        "Drunken Daddy – Koramangala"
+    ]
+
+    if "bar" in text and ("near me" in text or "suggest" in text):
+        return f"### 🍺 Best bars in {city}\n" + "\n".join(f"- {b}" for b in bars)
+
+    return None
 
 # ---------------- LLM ----------------
 llm = ChatGroq(
@@ -167,7 +131,7 @@ llm = ChatGroq(
     streaming=True
 )
 
-# ---------------- HERO TITLE ----------------
+# ---------------- HERO ----------------
 st.markdown("""
 <div style="margin-top:30vh; text-align:center;">
     <h1>💬 NeoMind AI</h1>
@@ -175,7 +139,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- DISPLAY CHAT ----------------
+# ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
@@ -183,35 +147,33 @@ for msg in st.session_state.messages:
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- HANDLE CHAT ----------------
+# ---------------- CHAT HANDLER ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
 
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    local_reply = smart_answer(prompt)
+    local = smart_answer(prompt)
 
-    if local_reply:
+    if local:
         with st.chat_message("assistant"):
-            st.markdown(local_reply)
-        st.session_state.messages.append(AIMessage(content=local_reply))
+            st.markdown(local)
+        st.session_state.messages.append(AIMessage(content=local))
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
                 0,
-                SystemMessage(
-                    content="You are NeoMind AI, a friendly, fast, and clear assistant."
-                )
+                SystemMessage(content="You are NeoMind AI, fast and helpful.")
             )
             st.session_state.system_added = True
 
         with st.chat_message("assistant"):
             placeholder = st.empty()
-            full_response = ""
+            response = ""
             for chunk in llm.stream(st.session_state.messages):
                 if chunk.content:
-                    full_response += chunk.content
-                    placeholder.markdown(full_response)
+                    response += chunk.content
+                    placeholder.markdown(response)
 
-        st.session_state.messages.append(AIMessage(content=full_response))
+        st.session_state.messages.append(AIMessage(content=response))
