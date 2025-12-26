@@ -89,17 +89,14 @@ else:
     btn_text = "#000000"
     placeholder = "#555555"
 
-# ---------------- CSS (FINAL FIX) ----------------
+# ---------------- CSS ----------------
 st.markdown(f"""
 <style>
-
-/* APP */
 .stApp {{
     background: {bg};
     color: {text};
 }}
 
-/* SIDEBAR */
 [data-testid="stSidebar"] {{
     background: {sidebar_bg};
 }}
@@ -107,7 +104,6 @@ st.markdown(f"""
     color: {text} !important;
 }}
 
-/* BUTTONS */
 .stButton > button {{
     background: {btn_bg} !important;
     color: {btn_text} !important;
@@ -116,41 +112,16 @@ st.markdown(f"""
     font-weight: 600;
 }}
 
-/* 🔥 ASK INPUT */
-[data-testid="stTextInput"] input {{
+[data-testid="stChatInput"] textarea {{
     background-color: {input_bg} !important;
     color: {text} !important;
     border: 2px solid {border} !important;
     border-radius: 10px !important;
-    padding: 0.55rem 0.9rem !important;
 }}
 
-[data-testid="stTextInput"] input::placeholder {{
+[data-testid="stChatInput"] textarea::placeholder {{
     color: {placeholder} !important;
 }}
-
-/* ✅ FIX: LABEL COLOR (THIS WAS MISSING) */
-[data-testid="stTextInput"] label {{
-    color: {text} !important;
-}}
-
-/* REMOVE FRAME */
-[data-testid="stTextInput"] {{
-    background: transparent !important;
-    border: none !important;
-}}
-
-/* TEXTAREA */
-textarea {{
-    background: {input_bg} !important;
-    color: {text} !important;
-    border: 2px solid {border} !important;
-    border-radius: 10px;
-}}
-textarea::placeholder {{
-    color: {placeholder} !important;
-}}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -158,11 +129,12 @@ textarea::placeholder {{
 def smart_answer(prompt: str):
     text = prompt.lower()
     if "bar" in text and ("near me" in text or "suggest" in text):
-        return """### 🍺 Best bars in Bengaluru
-- Toit – Indiranagar
-- Big Pitcher – Indiranagar
-- The Biere Club – Lavelle Road
-- Skyye – Rooftop Lounge
+        return """🍺 **Best bars in Bengaluru**
+
+- Toit – Indiranagar  
+- Big Pitcher – Indiranagar  
+- The Biere Club – Lavelle Road  
+- Skyye – Rooftop Lounge  
 - Drunken Daddy – Koramangala
 """
     return None
@@ -186,14 +158,15 @@ st.markdown("""
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
-        st.markdown(msg.content)
+        st.markdown(f"<div style='color:{text}'>{msg.content}</div>", unsafe_allow_html=True)
 
-# ---------------- INPUT ----------------
-prompt = st.text_input("Ask NeoMind AI anything…")
+# ---------------- CHAT INPUT (FIXED) ----------------
+prompt = st.chat_input("Ask NeoMind AI anything…")
 
 # ---------------- CHAT HANDLER ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
+
     with st.chat_message("user"):
         st.markdown(prompt)
 
@@ -202,20 +175,24 @@ if prompt:
     if reply:
         st.session_state.messages.append(AIMessage(content=reply))
         with st.chat_message("assistant"):
-            st.markdown(reply)
+            st.markdown(f"<div style='color:{text}'>{reply}</div>", unsafe_allow_html=True)
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
-                0, SystemMessage(content="You are NeoMind AI, fast and helpful.")
+                0,
+                SystemMessage(content="You are NeoMind AI, fast and helpful.")
             )
             st.session_state.system_added = True
 
         with st.chat_message("assistant"):
-            placeholder = st.empty()
+            placeholder_box = st.empty()
             full = ""
             for chunk in llm.stream(st.session_state.messages):
                 if chunk.content:
                     full += chunk.content
-                    placeholder.markdown(full)
+                    placeholder_box.markdown(
+                        f"<div style='color:{text}'>{full}</div>",
+                        unsafe_allow_html=True
+                    )
 
         st.session_state.messages.append(AIMessage(content=full))
