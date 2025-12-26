@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- GOOGLE VERIFICATION ----------------
+# ---------------- GOOGLE SEARCH CONSOLE ----------------
 st.markdown("""
 <meta name="google-site-verification" content="abc123XYZ456" />
 """, unsafe_allow_html=True)
@@ -71,26 +71,29 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# ---------------- THEME ----------------
+# ---------------- THEME VARIABLES ----------------
 if st.session_state.dark_mode:
     bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
     sidebar_bg = "#0f2027"
     text = "#ffffff"
-    subtext = "#d1d5db"
-    input_bg = "#1f2933"
+    muted = "#cbd5e1"
+    button_bg = "#ffffff"
+    button_text = "#000000"
     assistant_bg = "rgba(255,255,255,0.08)"
 else:
     bg = "linear-gradient(-45deg,#fdfbfb,#ebedee,#dfe9f3,#f6f7f8)"
     sidebar_bg = "#ffffff"
     text = "#111111"
-    subtext = "#444444"
-    input_bg = "#ffffff"
+    muted = "#444444"
+    button_bg = "#111111"
+    button_text = "#ffffff"
     assistant_bg = "rgba(0,0,0,0.06)"
 
-# ---------------- CSS (SIDEBAR FIXED) ----------------
+# ---------------- CSS (CLEAR CHAT FIXED) ----------------
 st.markdown(f"""
 <style>
-/* MAIN */
+
+/* APP */
 .stApp {{
     background: {bg};
     background-size: 400% 400%;
@@ -100,20 +103,29 @@ st.markdown(f"""
 
 /* SIDEBAR */
 [data-testid="stSidebar"] {{
-    background-color: {sidebar_bg} !important;
+    background-color: {sidebar_bg};
 }}
 
 [data-testid="stSidebar"] * {{
-    color: {text} !important;
+    color: {text};
 }}
 
 [data-testid="stSidebar"] label {{
-    color: {subtext} !important;
+    color: {muted};
 }}
 
-/* INPUT */
+/* BUTTON FIX (THIS FIXES CLEAR CHAT) */
+button[kind="secondary"],
+button[kind="primary"] {{
+    background-color: {button_bg} !important;
+    color: {button_text} !important;
+    border-radius: 8px;
+    font-weight: 600;
+}}
+
+/* TEXT INPUT */
 textarea, input {{
-    background-color: {input_bg} !important;
+    background-color: transparent !important;
     color: {text} !important;
 }}
 
