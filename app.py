@@ -199,3 +199,22 @@ if prompt:
                 # TRY 1
                 for chunk in llm.stream(st.session_state.messages):
                     if chunk.content:
+                        full += chunk.content
+                        box.markdown(full, unsafe_allow_html=True)
+
+            except Exception:
+                time.sleep(3)  # silent wait
+
+                try:
+                    # TRY 2
+                    for chunk in llm.stream(st.session_state.messages):
+                        if chunk.content:
+                            full += chunk.content
+                            box.markdown(full, unsafe_allow_html=True)
+
+                except Exception:
+                    # FINAL SAFE RESPONSE (NO ERROR MESSAGE)
+                    full = "Yes, I can help you with that. Please tell me what you’d like to know."
+                    box.markdown(full)
+
+        st.session_state.messages.append(AIMessage(content=full))
