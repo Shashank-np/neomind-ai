@@ -54,24 +54,27 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# ---------------- CSS (CHATGPT STYLE INPUT) ----------------
+# ---------------- CLEAN CHAT INPUT CSS (FINAL FIX) ----------------
 st.markdown("""
 <style>
-/* CHAT INPUT CONTAINER */
+
+/* REMOVE BACK FRAME */
 [data-testid="stChatInput"] {
-    position: relative;
-    padding: 10px;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 12px !important;
 }
 
-/* TEXTAREA */
+/* MAIN INPUT */
 [data-testid="stChatInput"] textarea {
-    background: #000000 !important;
+    background-color: #000000 !important;
     color: #ffffff !important;
     border: 2px solid #ffffff !important;
     border-radius: 28px !important;
-    padding: 16px 60px 16px 22px !important;
+    padding: 14px 52px 14px 20px !important;
     font-size: 16px !important;
-    min-height: 56px !important;
+    min-height: 52px !important;
     resize: none !important;
 }
 
@@ -80,26 +83,24 @@ st.markdown("""
     color: #bbbbbb !important;
 }
 
-/* SEND BUTTON INSIDE */
+/* SEND BUTTON — KEEP STREAMLIT BEHAVIOR */
 [data-testid="stChatInput"] button {
-    position: absolute !important;
-    right: 22px;
-    bottom: 18px;
-    background: transparent !important;
+    background-color: #000000 !important;
     border: 2px solid #ffffff !important;
     border-radius: 50% !important;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white !important;
+    width: 36px !important;
+    height: 36px !important;
+    margin-bottom: 6px !important;
 }
 
-/* REMOVE EXTRA OUTLINE */
-[data-testid="stChatInput"] textarea:focus {
-    outline: none !important;
+/* MOBILE RESPONSIVE */
+@media (max-width: 768px) {
+    [data-testid="stChatInput"] textarea {
+        font-size: 15px !important;
+        padding: 12px 48px 12px 18px !important;
+    }
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -118,7 +119,7 @@ BAR_DATA = {
         "The Biere Club – Lavelle Road",
         "Skyye – UB City",
         "Drunken Daddy – Koramangala"
-    ],
+    ]
 }
 
 # ---------------- SMART ANSWER ----------------
@@ -156,7 +157,7 @@ for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content, unsafe_allow_html=True)
 
-# ---------------- CHAT INPUT ----------------
+# ---------------- CHAT INPUT (DO NOT TOUCH) ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 # ---------------- CHAT HANDLER ----------------
