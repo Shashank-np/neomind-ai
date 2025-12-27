@@ -57,7 +57,6 @@ with st.sidebar:
             st.warning("Please write something")
 
     st.write("-------------------------------")
-    # st.markdown("**NeoMind AI • Personal Project**")
     st.caption("Created by **Shashank N P**")
 
 # ---------------- THEME VARIABLES ----------------
@@ -71,7 +70,7 @@ btn_bg = "#000000"
 btn_text = "#ffffff"
 placeholder = "#bbbbbb"
 
-# ---------------- CSS ----------------
+# ---------------- CSS (UPDATED INPUT FIX) ----------------
 st.markdown(f"""
 <style>
 .stApp {{
@@ -94,15 +93,34 @@ st.markdown(f"""
     font-weight: 600;
 }}
 
+[data-testid="stChatInput"] {{
+    padding: 8px !important;
+}}
+
 [data-testid="stChatInput"] textarea {{
     background-color: {chat_input_bg} !important;
     color: {text} !important;
     border: 2px solid {border} !important;
-    border-radius: 10px !important;
+    border-radius: 16px !important;
+    padding: 14px 18px !important;
+    font-size: 16px !important;
+    line-height: 1.4 !important;
+    box-shadow: none !important;
+}}
+
+[data-testid="stChatInput"] textarea:focus {{
+    outline: none !important;
+    box-shadow: 0 0 0 1px {border} !important;
 }}
 
 [data-testid="stChatInput"] textarea::placeholder {{
     color: {placeholder} !important;
+}}
+
+[data-testid="stChatInput"] button {{
+    border-radius: 50% !important;
+    background: {btn_bg} !important;
+    border: 2px solid {border} !important;
 }}
 
 textarea {{
@@ -206,21 +224,7 @@ for msg in st.session_state.messages:
         st.markdown(msg.content, unsafe_allow_html=True)
 
 # ---------------- AUTO SCROLL ----------------
-def scroll_to_bottom():
-    st.markdown(
-        """
-        <script>
-        var element = document.getElementById("bottom-anchor");
-        if (element) {
-            element.scrollIntoView({behavior: "smooth"});
-        }
-        </script>
-        """,
-        unsafe_allow_html=True
-    )
-
 st.markdown('<div id="bottom-anchor"></div>', unsafe_allow_html=True)
-scroll_to_bottom()
 
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
@@ -249,10 +253,15 @@ if prompt:
         with st.chat_message("assistant"):
             placeholder_box = st.empty()
             full = ""
-            for chunk in llm.stream(st.session_state.messages):
-                if chunk.content:
-                    full += chunk.content
-                    placeholder_box.markdown(full, unsafe_allow_html=True)
+
+            try:
+                for chunk in llm.stream(st.session_state.messages):
+                    if chunk.content:
+                        full += chunk.content
+                        placeholder_box.markdown(full, unsafe_allow_html=True)
+
+            except Exception:
+                full = "⚠️ I'm getting too many requests right now. Please wait a few seconds and try again."
+                placeholder_box.markdown(full)
 
         st.session_state.messages.append(AIMessage(content=full))
-
