@@ -21,9 +21,11 @@ if "messages" not in st.session_state:
 if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
-# 🔒 BLOCK INPUT WHILE RESPONSE IS GENERATING
 if "is_generating" not in st.session_state:
     st.session_state.is_generating = False
+
+if "last_prompt" not in st.session_state:
+    st.session_state.last_prompt = ""
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
@@ -36,39 +38,12 @@ with st.sidebar:
         st.session_state.messages = []
         st.session_state.system_added = False
         st.session_state.is_generating = False
+        st.session_state.last_prompt = ""
         st.rerun()
 
-    st.divider()
-    st.subheader("🆘 Help & Feedback")
-
-    feedback = st.text_area("Write your message here…")
-
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={
-                    "name": "NeoMind AI User",
-                    "email": "no-reply@neomind.ai",
-                    "message": feedback
-                }
-            )
-            st.success("✅ Feedback sent!")
-        else:
-            st.warning("Please write something")
-
-    st.caption("Created by **Shashank N P**")
-
-# ---------------- CITY DATA ----------------
+# ---------------- SMART ANSWER ----------------
 BAR_DATA = {
     "bengaluru": [
-        "Toit – Indiranagar",
-        "Big Pitcher – Indiranagar",
-        "The Biere Club – Lavelle Road",
-        "Skyye – UB City",
-        "Drunken Daddy – Koramangala"
-    ],
-    "bangalore": [
         "Toit – Indiranagar",
         "Big Pitcher – Indiranagar",
         "The Biere Club – Lavelle Road",
@@ -77,12 +52,10 @@ BAR_DATA = {
     ]
 }
 
-# ---------------- SMART ANSWER ----------------
 def smart_answer(prompt: str):
     text = prompt.lower()
     if "bar" not in text:
         return None
-
     now = datetime.now().strftime("%d %b %Y | %I:%M %p")
     for city in BAR_DATA:
         if city in text:
@@ -118,23 +91,33 @@ prompt = st.chat_input("Ask NeoMind AI anything…")
 # ---------------- CHAT HANDLER ----------------
 if prompt and not st.session_state.is_generating:
 
-    # ❌ IGNORE JUNK INPUT (single letters)
-    if len(prompt.strip()) < 2:
-        pass
+    clean_prompt = prompt.strip()
+
+    # ❌ Ignore repeated or incomplete inputs
+    word_count = len(clean_prompt.split())
+    is_incomplete = word_count < 3 and not clean_prompt.endswith(("?", ".", "!"))
+
+    if (
+        is_incomplete
+        or clean_prompt == st.session_state.last_prompt
+    ):
+        pass  # silently ignore (ChatGPT behavior)
 
     else:
         st.session_state.is_generating = True
-        st.session_state.messages.append(HumanMessage(content=prompt))
+        st.session_state.last_prompt = clean_prompt
+
+        st.session_state.messages.append(HumanMessage(content=clean_prompt))
 
         with st.chat_message("user"):
-            st.markdown(prompt)
+            st.markdown(clean_prompt)
 
-        reply = smart_answer(prompt)
+        reply = smart_answer(clean_prompt)
 
         if reply:
-            st.session_state.messages.append(AIMessage(content=reply))
             with st.chat_message("assistant"):
                 st.markdown(reply)
+            st.session_state.messages.append(AIMessage(content=reply))
             st.session_state.is_generating = False
 
         else:
@@ -154,8 +137,7 @@ if prompt and not st.session_state.is_generating:
                             full += chunk.content
                             box.markdown(full)
                 except Exception:
-                    full = "⚠️ Please wait a few seconds and try again."
-                    box.markdown(full)
+                    pass  # ❌ NO MESSAGE TO USER
 
             st.session_state.messages.append(AIMessage(content=full))
             st.session_state.is_generating = False
