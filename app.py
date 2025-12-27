@@ -21,6 +21,10 @@ if "messages" not in st.session_state:
 if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
+# ✅ prevent repeated rate-limit spam
+if "rate_limited" not in st.session_state:
+    st.session_state.rate_limited = False
+
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
@@ -31,6 +35,7 @@ with st.sidebar:
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.system_added = False
+        st.session_state.rate_limited = False
         st.rerun()
 
     st.divider()
@@ -56,7 +61,6 @@ with st.sidebar:
         else:
             st.warning("Please write something")
 
-    st.write("-------------------------------")
     st.caption("Created by **Shashank N P**")
 
 # ---------------- THEME VARIABLES ----------------
@@ -64,13 +68,10 @@ bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
 sidebar_bg = "#0b1f2a"
 text = "#ffffff"
 chat_input_bg = "#000000"
-feedback_bg = "#0f2027"
 border = "#ffffff"
-btn_bg = "#000000"
-btn_text = "#ffffff"
 placeholder = "#bbbbbb"
 
-# ---------------- CSS (UPDATED INPUT FIX) ----------------
+# ---------------- CHAT BAR CSS (SINGLE FRAME – CHATGPT STYLE) ----------------
 st.markdown(f"""
 <style>
 .stApp {{
@@ -85,53 +86,46 @@ st.markdown(f"""
     color: {text} !important;
 }}
 
-.stButton > button {{
-    background: {btn_bg} !important;
-    color: {btn_text} !important;
-    border: 2px solid {border} !important;
-    border-radius: 10px;
-    font-weight: 600;
-}}
-
+/* REMOVE OUTER FRAME */
 [data-testid="stChatInput"] {{
-    padding: 8px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 10px !important;
 }}
 
+/* SINGLE CLEAN INPUT BAR */
 [data-testid="stChatInput"] textarea {{
     background-color: {chat_input_bg} !important;
     color: {text} !important;
-    border: 2px solid {border} !important;
-    border-radius: 16px !important;
-    padding: 14px 18px !important;
+    border: 1.5px solid {border} !important;
+    border-radius: 8px !important;
+    padding: 14px 54px 14px 16px !important;
     font-size: 16px !important;
-    line-height: 1.4 !important;
-    box-shadow: none !important;
+    min-height: 50px !important;
+    resize: none !important;
 }}
 
-[data-testid="stChatInput"] textarea:focus {{
-    outline: none !important;
-    box-shadow: 0 0 0 1px {border} !important;
-}}
-
+/* PLACEHOLDER */
 [data-testid="stChatInput"] textarea::placeholder {{
     color: {placeholder} !important;
 }}
 
+/* SEND ARROW – RIGHT SIDE */
 [data-testid="stChatInput"] button {{
-    border-radius: 50% !important;
-    background: {btn_bg} !important;
-    border: 2px solid {border} !important;
+    background: transparent !important;
+    border: none !important;
+    width: 36px !important;
+    height: 36px !important;
+    margin-bottom: 6px !important;
 }}
 
-textarea {{
-    background-color: {feedback_bg} !important;
-    color: {text} !important;
-    border: 2px solid {border} !important;
-    border-radius: 10px !important;
-}}
-
-textarea::placeholder {{
-    color: {placeholder} !important;
+/* MOBILE */
+@media (max-width: 768px) {{
+    [data-testid="stChatInput"] textarea {{
+        font-size: 15px !important;
+        padding: 12px 50px 12px 14px !important;
+    }}
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -197,8 +191,6 @@ def smart_answer(prompt: str):
 🕒 {now}
 
 """ + "\n".join([f"- {b}" for b in BAR_DATA[city]])
-        else:
-            return "❌ Sorry, I couldn't find bar data for your location."
 
     return None
 
@@ -223,15 +215,13 @@ for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content, unsafe_allow_html=True)
 
-# ---------------- AUTO SCROLL ----------------
-st.markdown('<div id="bottom-anchor"></div>', unsafe_allow_html=True)
-
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 # ---------------- CHAT HANDLER ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
+    st.session_state.rate_limited = False
 
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -251,17 +241,23 @@ if prompt:
             st.session_state.system_added = True
 
         with st.chat_message("assistant"):
-            placeholder_box = st.empty()
+            box = st.empty()
             full = ""
 
             try:
                 for chunk in llm.stream(st.session_state.messages):
                     if chunk.content:
                         full += chunk.content
-                        placeholder_box.markdown(full, unsafe_allow_html=True)
+                        box.markdown(full, unsafe_allow_html=True)
 
             except Exception:
-                full = "⚠️ I'm getting too many requests right now. Please wait a few seconds and try again."
-                placeholder_box.markdown(full)
+                # ✅ show warning once (fast UX)
+                if not st.session_state.rate_limited:
+                    full = "⚠️ I'm getting too many requests right now. Please wait a few seconds and try again."
+                    box.markdown(full)
+                    st.session_state.rate_limited = True
+                else:
+                    full = ""
 
-        st.session_state.messages.append(AIMessage(content=full))
+        if full:
+            st.session_state.messages.append(AIMessage(content=full))
