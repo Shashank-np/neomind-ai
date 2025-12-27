@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -21,6 +21,10 @@ if "messages" not in st.session_state:
 if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
+# 🔒 Rate-limit lock
+if "cooldown_until" not in st.session_state:
+    st.session_state.cooldown_until = None
+
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
@@ -31,6 +35,7 @@ with st.sidebar:
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.system_added = False
+        st.session_state.cooldown_until = None
         st.rerun()
 
     st.divider()
@@ -56,7 +61,6 @@ with st.sidebar:
         else:
             st.warning("Please write something")
 
-    st.write("-------------------------------")
     st.caption("Created by **Shashank N P**")
 
 # ---------------- THEME VARIABLES ----------------
@@ -64,13 +68,10 @@ bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
 sidebar_bg = "#0b1f2a"
 text = "#ffffff"
 chat_input_bg = "#000000"
-feedback_bg = "#0f2027"
 border = "#ffffff"
-btn_bg = "#000000"
-btn_text = "#ffffff"
 placeholder = "#bbbbbb"
 
-# ---------------- CSS (ONLY CHAT INPUT FIXED) ----------------
+# ---------------- CHAT INPUT CSS (FLAT STYLE) ----------------
 st.markdown(f"""
 <style>
 .stApp {{
@@ -85,23 +86,23 @@ st.markdown(f"""
     color: {text} !important;
 }}
 
-/* 🔧 REMOVE CHAT INPUT BACK FRAME */
+/* REMOVE BACK FRAME */
 [data-testid="stChatInput"] {{
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    padding: 10px !important;
+    padding: 12px !important;
 }}
 
-/* 🔧 MAIN INPUT */
+/* FLAT INPUT BAR */
 [data-testid="stChatInput"] textarea {{
     background-color: {chat_input_bg} !important;
     color: {text} !important;
-    border: 2px solid {border} !important;
-    border-radius: 28px !important;
-    padding: 14px 52px 14px 20px !important;
+    border: 1.5px solid {border} !important;
+    border-radius: 8px !important;
+    padding: 14px 56px 14px 16px !important;
     font-size: 16px !important;
-    min-height: 52px !important;
+    min-height: 50px !important;
     resize: none !important;
 }}
 
@@ -110,21 +111,20 @@ st.markdown(f"""
     color: {placeholder} !important;
 }}
 
-/* SEND BUTTON — KEEP STREAMLIT BEHAVIOR */
+/* SEND ARROW (RIGHT SIDE) */
 [data-testid="stChatInput"] button {{
-    background-color: {btn_bg} !important;
-    border: 2px solid {border} !important;
-    border-radius: 50% !important;
+    background-color: transparent !important;
+    border: none !important;
     width: 36px !important;
     height: 36px !important;
     margin-bottom: 6px !important;
 }}
 
-/* 📱 MOBILE RESPONSIVE */
+/* MOBILE */
 @media (max-width: 768px) {{
     [data-testid="stChatInput"] textarea {{
         font-size: 15px !important;
-        padding: 12px 48px 12px 18px !important;
+        padding: 12px 52px 12px 14px !important;
     }}
 }}
 </style>
@@ -145,27 +145,8 @@ BAR_DATA = {
         "The Biere Club – Lavelle Road",
         "Skyye – UB City",
         "Drunken Daddy – Koramangala"
-    ],
-    "chitradurga": [
-        "Hotel Mayura Bar – Chitradurga",
-        "SLV Bar & Restaurant – Chitradurga",
-        "Naveen Bar – Chitradurga",
-        "Local Permit Room – Chitradurga"
-    ],
-    "mysuru": [
-        "The Road – Radisson Blu",
-        "Purple Haze – Mysuru",
-        "Pelican Pub – Mysuru"
     ]
 }
-
-# ---------------- IP LOCATION ----------------
-def get_ip_city():
-    try:
-        res = requests.get("https://ipinfo.io/json", timeout=5).json()
-        return res.get("city", "").lower()
-    except:
-        return ""
 
 # ---------------- SMART ANSWER ----------------
 def smart_answer(prompt: str):
@@ -174,7 +155,6 @@ def smart_answer(prompt: str):
         return None
 
     now = datetime.now().strftime("%d %b %Y | %I:%M %p")
-
     for city in BAR_DATA:
         if city in text:
             return f"""
@@ -182,18 +162,6 @@ def smart_answer(prompt: str):
 🕒 {now}
 
 """ + "\n".join([f"- {b}" for b in BAR_DATA[city]])
-
-    if "near me" in text:
-        city = get_ip_city()
-        if city in BAR_DATA:
-            return f"""
-📍 **Bars Near You ({city.title()})**
-🕒 {now}
-
-""" + "\n".join([f"- {b}" for b in BAR_DATA[city]])
-        else:
-            return "❌ Sorry, I couldn't find bar data for your location."
-
     return None
 
 # ---------------- LLM ----------------
@@ -217,43 +185,50 @@ for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content, unsafe_allow_html=True)
 
-# ---------------- AUTO SCROLL ----------------
-st.markdown('<div id="bottom-anchor"></div>', unsafe_allow_html=True)
-
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 # ---------------- CHAT HANDLER ----------------
 if prompt:
-    st.session_state.messages.append(HumanMessage(content=prompt))
+    now = datetime.now()
 
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    reply = smart_answer(prompt)
-
-    if reply:
-        st.session_state.messages.append(AIMessage(content=reply))
+    # ⛔ Cooldown active
+    if st.session_state.cooldown_until and now < st.session_state.cooldown_until:
         with st.chat_message("assistant"):
-            st.markdown(reply, unsafe_allow_html=True)
+            st.warning("⚠️ Please wait a few seconds before sending another message.")
     else:
-        if not st.session_state.system_added:
-            st.session_state.messages.insert(
-                0,
-                SystemMessage(content="You are NeoMind AI. Be accurate, contextual and helpful.")
-            )
-            st.session_state.system_added = True
+        st.session_state.messages.append(HumanMessage(content=prompt))
 
-        with st.chat_message("assistant"):
-            placeholder_box = st.empty()
-            full = ""
-            try:
-                for chunk in llm.stream(st.session_state.messages):
-                    if chunk.content:
-                        full += chunk.content
-                        placeholder_box.markdown(full, unsafe_allow_html=True)
-            except Exception:
-                full = "⚠️ Too many requests right now. Please try again in a few seconds."
-                placeholder_box.markdown(full)
+        with st.chat_message("user"):
+            st.markdown(prompt)
 
-        st.session_state.messages.append(AIMessage(content=full))
+        reply = smart_answer(prompt)
+
+        if reply:
+            st.session_state.messages.append(AIMessage(content=reply))
+            with st.chat_message("assistant"):
+                st.markdown(reply, unsafe_allow_html=True)
+        else:
+            if not st.session_state.system_added:
+                st.session_state.messages.insert(
+                    0,
+                    SystemMessage(content="You are NeoMind AI. Be accurate, contextual and helpful.")
+                )
+                st.session_state.system_added = True
+
+            with st.chat_message("assistant"):
+                box = st.empty()
+                full = ""
+                try:
+                    for chunk in llm.stream(st.session_state.messages):
+                        if chunk.content:
+                            full += chunk.content
+                            box.markdown(full, unsafe_allow_html=True)
+                except Exception:
+                    # ⏱ lock for 8 seconds
+                    st.session_state.cooldown_until = now + timedelta(seconds=8)
+                    full = "⚠️ Too many requests right now. Please wait a few seconds."
+                    box.markdown(full)
+
+            st.session_state.messages.append(AIMessage(content=full))
+
