@@ -55,6 +55,10 @@ if "messages" not in st.session_state:
 if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
+# 🔒 cooldown timestamp (REQUIRED FIX)
+if "last_llm_call" not in st.session_state:
+    st.session_state.last_llm_call = 0.0
+
 # ---------------- SMART CHATGPT-LIKE LOGIC ----------------
 def smart_answer(prompt: str):
     text = prompt.lower()
@@ -114,6 +118,7 @@ with st.sidebar:
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.system_added = False
+        st.session_state.last_llm_call = 0.0
         st.rerun()
 
     st.divider()
@@ -163,9 +168,10 @@ for msg in st.session_state.messages:
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- HANDLE CHAT (RATE-LIMIT FIXED) ----------------
+# ---------------- HANDLE CHAT (FINAL FIX APPLIED) ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
+
     with st.chat_message("user"):
         st.markdown(prompt)
 
@@ -175,6 +181,7 @@ if prompt:
         with st.chat_message("assistant"):
             st.markdown(local_reply)
         st.session_state.messages.append(AIMessage(content=local_reply))
+
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
@@ -189,22 +196,28 @@ if prompt:
             placeholder = st.empty()
             full_response = ""
 
+            now = time.time()
+            elapsed = now - st.session_state.last_llm_call
+
             try:
-                # FIRST TRY
-                for chunk in llm.stream(st.session_state.messages):
-                    if chunk.content:
-                        full_response += chunk.content
-                        placeholder.markdown(full_response)
+                # ✅ STREAM ONLY IF COOLDOWN PASSED
+                if elapsed > 2.5:
+                    st.session_state.last_llm_call = now
 
-            except Exception:
-                # SILENT WAIT + RETRY (NO UI ERROR)
-                time.sleep(2)
-
-                try:
                     for chunk in llm.stream(st.session_state.messages):
                         if chunk.content:
                             full_response += chunk.content
                             placeholder.markdown(full_response)
+                else:
+                    raise RuntimeError("Cooldown active")
+
+            except Exception:
+                # 🔁 SAFE NON-STREAMING FALLBACK
+                st.session_state.last_llm_call = time.time()
+                try:
+                    response = llm.invoke(st.session_state.messages)
+                    full_response = response.content
+                    placeholder.markdown(full_response)
                 except Exception:
                     full_response = "I’m here to help. Please continue with your question."
                     placeholder.markdown(full_response)
