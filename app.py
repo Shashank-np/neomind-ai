@@ -95,14 +95,41 @@ def smart_answer(prompt):
 with st.sidebar:
     st.title("🧠 NeoMind AI")
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
+
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.last_place = None
         st.rerun()
 
+    st.divider()
+    st.subheader("🆘 Help & Feedback")
+
+    feedback = st.text_area(
+        "Write your message here…",
+        placeholder="Share your feedback or suggestions"
+    )
+
+    if st.button("Send Feedback"):
+        if feedback.strip():
+            requests.post(
+                "https://formspree.io/f/xblanbjk",   # ✅ same backend as old code
+                data={
+                    "name": "NeoMind AI User",
+                    "email": "no-reply@neomind.ai",
+                    "message": feedback
+                },
+                headers={"Accept": "application/json"}
+            )
+            st.success("✅ Feedback sent successfully!")
+        else:
+            st.warning("Please write something before sending.")
+
+    st.divider()
+    st.caption("Created by **Shashank N P**")
+
 # ---------------- FREE LLM ----------------
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",  # ✅ FREE & FAST
+    model="llama-3.1-8b-instant",   # FREE & FAST
     api_key=api_key,
     temperature=temperature,
     streaming=False
