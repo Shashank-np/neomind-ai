@@ -2,8 +2,9 @@ import streamlit as st
 import requests
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from groq import RateLimitError  # ✅ IMPORTANT
+from groq import RateLimitError
 
+# ---------------- API KEY (FROM SECOND CODE) ----------------
 api_key = st.secrets["GROQ_API_KEY"]
 
 # ---------------- PAGE CONFIG ----------------
@@ -13,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- CSS (UNCHANGED) ----------------
+# ---------------- CSS (UNCHANGED – FROM SECOND CODE) ----------------
 st.markdown("""
 <style>
 .stApp {
@@ -52,7 +53,7 @@ if "messages" not in st.session_state:
 if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
-# ---------------- SMART ANSWER (UNCHANGED) ----------------
+# ---------------- SMART ANSWER (FROM FIRST CODE) ----------------
 def smart_answer(prompt: str):
     text = prompt.lower()
     city = "Bengaluru"
@@ -89,17 +90,20 @@ def smart_answer(prompt: str):
     }
 
     for key, items in knowledge.items():
-        if key in text and ("near me" in text or "suggest" in text or "best" in text):
+        if key in text and ("best" in text or "near me" in text or "suggest" in text):
+            formatted = "\n".join(f"- {i}" for i in items)
             return f"""
 Here are some popular **{key}s in {city}**:
 
-""" + "\n".join(f"- {i}" for i in items)
-
+{formatted}
+"""
     return None
 
-# ---------------- SIDEBAR (UNCHANGED) ----------------
+# ---------------- SIDEBAR (SECOND CODE) ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
+    st.caption("Text-based AI Assistant")
+
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
@@ -108,25 +112,33 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
+    st.subheader("🆘 Help & Feedback")
+
     feedback = st.text_area("Write your message here…")
 
-    if st.button("Send Feedback") and feedback.strip():
-        requests.post(
-            "https://formspree.io/f/xblanbjk",
-            data={
-                "name": "NeoMind AI User",
-                "email": "no-reply@neomind.ai",
-                "message": feedback
-            }
-        )
-        st.success("✅ Feedback sent!")
+    if st.button("Send Feedback"):
+        if feedback.strip():
+            requests.post(
+                "https://formspree.io/f/xblanbjk",
+                data={
+                    "name": "NeoMind AI User",
+                    "email": "no-reply@neomind.ai",
+                    "message": feedback
+                },
+                headers={"Accept": "application/json"}
+            )
+            st.success("✅ Feedback sent!")
+        else:
+            st.warning("Please write something")
 
-# ---------------- LLM (SAFE) ----------------
+    st.caption("Created by **Shashank N P**")
+
+# ---------------- LLM (SAFE – FROM SECOND CODE) ----------------
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
     api_key=api_key,
     temperature=temperature,
-    streaming=False
+    streaming=False   # 🔒 critical
 )
 
 # ---------------- HERO ----------------
@@ -137,7 +149,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- DISPLAY CHAT ----------------
+# ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
@@ -145,43 +157,51 @@ for msg in st.session_state.messages:
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- CHAT HANDLER (FIXED) ----------------
+# ---------------- CHAT HANDLER (FIRST CODE BEHAVIOR, SECOND CODE SAFETY) ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
-
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    reply = smart_answer(prompt)
+    local_reply = smart_answer(prompt)
 
-    if reply:
+    if local_reply:
         with st.chat_message("assistant"):
-            st.markdown(reply)
-        st.session_state.messages.append(AIMessage(content=reply))
+            st.markdown(local_reply)
+        st.session_state.messages.append(AIMessage(content=local_reply))
 
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
                 0,
-                SystemMessage(content="You are NeoMind AI, a clear and helpful assistant.")
+                SystemMessage(
+                    content="You are NeoMind AI, a friendly, fast, and clear assistant."
+                )
             )
             st.session_state.system_added = True
 
         with st.chat_message("assistant"):
+            placeholder = st.empty()
             try:
                 response = llm.invoke(st.session_state.messages)
-                st.markdown(response.content)
-                st.session_state.messages.append(
-                    AIMessage(content=response.content)
-                )
+                answer = response.content
 
             except RateLimitError:
-                # ✅ CLEAN USER MESSAGE (NO TRACEBACK)
-                safe_msg = (
-                    "⚠️ I’m temporarily busy due to high usage.\n\n"
-                    "Please wait a few minutes and try again. 😊"
+                answer = (
+                    "⏳ I'm temporarily busy due to high usage.\n\n"
+                    "Please wait a few minutes and try again."
                 )
-                st.markdown(safe_msg)
-                st.session_state.messages.append(
-                    AIMessage(content=safe_msg)
+
+            except Exception:
+                answer = (
+                    "⚠️ Something went wrong.\n\n"
+                    "Please try again."
                 )
+
+            # Simulated streaming (safe)
+            displayed = ""
+            for ch in answer:
+                displayed += ch
+                placeholder.markdown(displayed)
+
+            st.session_state.messages.append(AIMessage(content=answer))
