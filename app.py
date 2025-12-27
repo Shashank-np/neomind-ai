@@ -1,7 +1,6 @@
 import streamlit as st
 import os
 import requests
-import time
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -54,10 +53,6 @@ if "messages" not in st.session_state:
 
 if "system_added" not in st.session_state:
     st.session_state.system_added = False
-
-# 🔒 cooldown timestamp (REQUIRED FIX)
-if "last_llm_call" not in st.session_state:
-    st.session_state.last_llm_call = 0.0
 
 # ---------------- SMART CHATGPT-LIKE LOGIC ----------------
 def smart_answer(prompt: str):
@@ -118,7 +113,6 @@ with st.sidebar:
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.system_added = False
-        st.session_state.last_llm_call = 0.0
         st.rerun()
 
     st.divider()
@@ -144,12 +138,12 @@ with st.sidebar:
     st.divider()
     st.caption("Created by **Shashank N P**")
 
-# ---------------- LLM ----------------
+# ---------------- LLM (NON-STREAMING – SAFE) ----------------
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
     api_key=api_key,
     temperature=temperature,
-    streaming=True
+    streaming=False  # 🔥 IMPORTANT FIX
 )
 
 # ---------------- HERO TITLE ----------------
@@ -168,7 +162,7 @@ for msg in st.session_state.messages:
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- HANDLE CHAT (FINAL FIX APPLIED) ----------------
+# ---------------- HANDLE CHAT (CRASH-FREE) ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
 
@@ -193,33 +187,7 @@ if prompt:
             st.session_state.system_added = True
 
         with st.chat_message("assistant"):
-            placeholder = st.empty()
-            full_response = ""
+            response = llm.invoke(st.session_state.messages)
+            st.markdown(response.content)
 
-            now = time.time()
-            elapsed = now - st.session_state.last_llm_call
-
-            try:
-                # ✅ STREAM ONLY IF COOLDOWN PASSED
-                if elapsed > 2.5:
-                    st.session_state.last_llm_call = now
-
-                    for chunk in llm.stream(st.session_state.messages):
-                        if chunk.content:
-                            full_response += chunk.content
-                            placeholder.markdown(full_response)
-                else:
-                    raise RuntimeError("Cooldown active")
-
-            except Exception:
-                # 🔁 SAFE NON-STREAMING FALLBACK
-                st.session_state.last_llm_call = time.time()
-                try:
-                    response = llm.invoke(st.session_state.messages)
-                    full_response = response.content
-                    placeholder.markdown(full_response)
-                except Exception:
-                    full_response = "I’m here to help. Please continue with your question."
-                    placeholder.markdown(full_response)
-
-        st.session_state.messages.append(AIMessage(content=full_response))
+        st.session_state.messages.append(AIMessage(content=response.content))
