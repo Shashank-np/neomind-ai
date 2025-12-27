@@ -36,10 +36,7 @@ with st.sidebar:
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
-    feedback = st.text_area(
-        "Write your message here…",
-        placeholder="Type your feedback here..."
-    )
+    feedback = st.text_area("Write your message here…")
 
     if st.button("Send Feedback"):
         if feedback.strip():
@@ -49,90 +46,60 @@ with st.sidebar:
                     "name": "NeoMind AI User",
                     "email": "no-reply@neomind.ai",
                     "message": feedback
-                },
-                headers={"Accept": "application/json"}
+                }
             )
             st.success("✅ Feedback sent!")
         else:
             st.warning("Please write something")
 
-    st.write("-------------------------------")
     st.caption("Created by **Shashank N P**")
 
-# ---------------- THEME VARIABLES ----------------
-bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
-sidebar_bg = "#0b1f2a"
-text = "#ffffff"
-chat_input_bg = "#000000"
-feedback_bg = "#0f2027"
-border = "#ffffff"
-btn_bg = "#000000"
-btn_text = "#ffffff"
-placeholder = "#bbbbbb"
-
-# ---------------- CSS (UPDATED INPUT FIX) ----------------
-st.markdown(f"""
+# ---------------- CSS (CHATGPT STYLE INPUT) ----------------
+st.markdown("""
 <style>
-.stApp {{
-    background: {bg};
-    color: {text};
-}}
+/* CHAT INPUT CONTAINER */
+[data-testid="stChatInput"] {
+    position: relative;
+    padding: 10px;
+}
 
-[data-testid="stSidebar"] {{
-    background: {sidebar_bg};
-}}
-[data-testid="stSidebar"] * {{
-    color: {text} !important;
-}}
-
-.stButton > button {{
-    background: {btn_bg} !important;
-    color: {btn_text} !important;
-    border: 2px solid {border} !important;
-    border-radius: 10px;
-    font-weight: 600;
-}}
-
-[data-testid="stChatInput"] {{
-    padding: 8px !important;
-}}
-
-[data-testid="stChatInput"] textarea {{
-    background-color: {chat_input_bg} !important;
-    color: {text} !important;
-    border: 2px solid {border} !important;
-    border-radius: 16px !important;
-    padding: 14px 18px !important;
+/* TEXTAREA */
+[data-testid="stChatInput"] textarea {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+    border-radius: 28px !important;
+    padding: 16px 60px 16px 22px !important;
     font-size: 16px !important;
-    line-height: 1.4 !important;
-    box-shadow: none !important;
-}}
+    min-height: 56px !important;
+    resize: none !important;
+}
 
-[data-testid="stChatInput"] textarea:focus {{
-    outline: none !important;
-    box-shadow: 0 0 0 1px {border} !important;
-}}
+/* PLACEHOLDER */
+[data-testid="stChatInput"] textarea::placeholder {
+    color: #bbbbbb !important;
+}
 
-[data-testid="stChatInput"] textarea::placeholder {{
-    color: {placeholder} !important;
-}}
-
-[data-testid="stChatInput"] button {{
+/* SEND BUTTON INSIDE */
+[data-testid="stChatInput"] button {
+    position: absolute !important;
+    right: 22px;
+    bottom: 18px;
+    background: transparent !important;
+    border: 2px solid #ffffff !important;
     border-radius: 50% !important;
-    background: {btn_bg} !important;
-    border: 2px solid {border} !important;
-}}
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white !important;
+}
 
-textarea {{
-    background-color: {feedback_bg} !important;
-    color: {text} !important;
-    border: 2px solid {border} !important;
-    border-radius: 10px !important;
-}}
-
-textarea::placeholder {{
-    color: {placeholder} !important;
-}}
+/* REMOVE EXTRA OUTLINE */
+[data-testid="stChatInput"] textarea:focus {
+    outline: none !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -152,26 +119,7 @@ BAR_DATA = {
         "Skyye – UB City",
         "Drunken Daddy – Koramangala"
     ],
-    "chitradurga": [
-        "Hotel Mayura Bar – Chitradurga",
-        "SLV Bar & Restaurant – Chitradurga",
-        "Naveen Bar – Chitradurga",
-        "Local Permit Room – Chitradurga"
-    ],
-    "mysuru": [
-        "The Road – Radisson Blu",
-        "Purple Haze – Mysuru",
-        "Pelican Pub – Mysuru"
-    ]
 }
-
-# ---------------- IP LOCATION ----------------
-def get_ip_city():
-    try:
-        res = requests.get("https://ipinfo.io/json", timeout=5).json()
-        return res.get("city", "").lower()
-    except:
-        return ""
 
 # ---------------- SMART ANSWER ----------------
 def smart_answer(prompt: str):
@@ -180,26 +128,11 @@ def smart_answer(prompt: str):
         return None
 
     now = datetime.now().strftime("%d %b %Y | %I:%M %p")
-
     for city in BAR_DATA:
         if city in text:
-            return f"""
-🍺 **Best Bars in {city.title()}**
-🕒 {now}
-
-""" + "\n".join([f"- {b}" for b in BAR_DATA[city]])
-
-    if "near me" in text:
-        city = get_ip_city()
-        if city in BAR_DATA:
-            return f"""
-📍 **Bars Near You ({city.title()})**
-🕒 {now}
-
-""" + "\n".join([f"- {b}" for b in BAR_DATA[city]])
-        else:
-            return "❌ Sorry, I couldn't find bar data for your location."
-
+            return f"🍺 **Best Bars in {city.title()}**\n🕒 {now}\n\n" + "\n".join(
+                [f"- {b}" for b in BAR_DATA[city]]
+            )
     return None
 
 # ---------------- LLM ----------------
@@ -223,9 +156,6 @@ for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content, unsafe_allow_html=True)
 
-# ---------------- AUTO SCROLL ----------------
-st.markdown('<div id="bottom-anchor"></div>', unsafe_allow_html=True)
-
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
@@ -241,27 +171,18 @@ if prompt:
     if reply:
         st.session_state.messages.append(AIMessage(content=reply))
         with st.chat_message("assistant"):
-            st.markdown(reply, unsafe_allow_html=True)
+            st.markdown(reply)
     else:
-        if not st.session_state.system_added:
-            st.session_state.messages.insert(
-                0,
-                SystemMessage(content="You are NeoMind AI. Be accurate, contextual and helpful.")
-            )
-            st.session_state.system_added = True
-
         with st.chat_message("assistant"):
-            placeholder_box = st.empty()
+            box = st.empty()
             full = ""
-
             try:
                 for chunk in llm.stream(st.session_state.messages):
                     if chunk.content:
                         full += chunk.content
-                        placeholder_box.markdown(full, unsafe_allow_html=True)
-
-            except Exception:
-                full = "⚠️ I'm getting too many requests right now. Please wait a few seconds and try again."
-                placeholder_box.markdown(full)
+                        box.markdown(full)
+            except:
+                full = "⚠️ Too many requests. Please wait and try again."
+                box.markdown(full)
 
         st.session_state.messages.append(AIMessage(content=full))
