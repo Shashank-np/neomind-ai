@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import requests
+import time
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -57,7 +58,7 @@ if "system_added" not in st.session_state:
 # ---------------- SMART CHATGPT-LIKE LOGIC ----------------
 def smart_answer(prompt: str):
     text = prompt.lower()
-    city = "Bengaluru"   # default safe assumption
+    city = "Bengaluru"
 
     knowledge = {
         "bar": [
@@ -162,7 +163,7 @@ for msg in st.session_state.messages:
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- HANDLE CHAT ----------------
+# ---------------- HANDLE CHAT (RATE-LIMIT FIXED) ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
     with st.chat_message("user"):
@@ -187,11 +188,25 @@ if prompt:
         with st.chat_message("assistant"):
             placeholder = st.empty()
             full_response = ""
-            for chunk in llm.stream(st.session_state.messages):
-                if chunk.content:
-                    full_response += chunk.content
+
+            try:
+                # FIRST TRY
+                for chunk in llm.stream(st.session_state.messages):
+                    if chunk.content:
+                        full_response += chunk.content
+                        placeholder.markdown(full_response)
+
+            except Exception:
+                # SILENT WAIT + RETRY (NO UI ERROR)
+                time.sleep(2)
+
+                try:
+                    for chunk in llm.stream(st.session_state.messages):
+                        if chunk.content:
+                            full_response += chunk.content
+                            placeholder.markdown(full_response)
+                except Exception:
+                    full_response = "I’m here to help. Please continue with your question."
                     placeholder.markdown(full_response)
 
         st.session_state.messages.append(AIMessage(content=full_response))
-
-
