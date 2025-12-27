@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-import time
+import re
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -14,30 +14,38 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- LIGHT BLUE UI (OLD STYLE) ----------------
+# ---------------- SKY BLUE ANIMATED UI ----------------
 st.markdown("""
 <style>
 .stApp {
-    background: linear-gradient(180deg, #e6f4ff, #cfe9ff);
+    background: linear-gradient(180deg, #dff3ff, #b6e6ff);
+    background-size: 200% 200%;
+    animation: bgMove 12s ease infinite;
     color: #003366;
 }
 
+@keyframes bgMove {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+}
+
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #d9f0ff, #bfe3ff);
+    background: linear-gradient(180deg, #cfeeff, #a9dcff);
 }
 
 .stChatMessage[data-testid="stChatMessage-user"] {
-    background: linear-gradient(135deg, #6ec6ff, #4dabf7);
+    background: #4dabf7;
+    color: black;
     border-radius: 16px;
     padding: 12px;
-    color: black;
 }
 
 .stChatMessage[data-testid="stChatMessage-assistant"] {
     background: #ffffff;
+    color: #003366;
     border-radius: 16px;
     padding: 12px;
-    color: #003366;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -49,21 +57,36 @@ if "messages" not in st.session_state:
 if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
-# ---------------- SIMPLE LOCAL ANSWERS ----------------
+# ---------------- CITY-AWARE SMART ANSWER ----------------
+def extract_city(text):
+    cities = ["bengaluru", "bangalore", "davanagere", "mysuru", "mangalore", "hubli"]
+    for city in cities:
+        if city in text:
+            return city.title()
+    return None
+
 def smart_answer(prompt: str):
     text = prompt.lower()
-    city = "Bengaluru"
+    city = extract_city(text)
 
-    data = {
-        "bar": ["Toit", "Big Pitcher", "Skyye", "Drunken Daddy"],
-        "restaurant": ["Meghana Foods", "Truffles", "Empire", "MTR"],
-        "cafe": ["Third Wave Coffee", "Blue Tokai", "Glen's Bakehouse"],
-        "places": ["Lalbagh", "Cubbon Park", "ISKCON", "Nandi Hills"]
+    places = {
+        "Davanagere": {
+            "bar": ["Lion’s Bar", "Mehfil Bar", "Relax Bar"],
+            "places": ["Kunduvada Kere", "Anjaneya Temple", "Glass House"]
+        },
+        "Bengaluru": {
+            "bar": ["Toit", "Big Pitcher", "Skyye", "Drunken Daddy"],
+            "places": ["Lalbagh", "Cubbon Park", "ISKCON", "Bangalore Palace"]
+        }
     }
 
-    for key, items in data.items():
-        if key in text:
-            return f"Here are popular {key}s in {city}:\n\n" + "\n".join(f"- {i}" for i in items)
+    for category in ["bar", "places"]:
+        if category in text:
+            if not city:
+                return "📍 Please tell me the city so I can give accurate suggestions."
+            if city in places and category in places[city]:
+                return f"Here are popular {category}s in **{city}**:\n\n" + \
+                       "\n".join(f"- {p}" for p in places[city][category])
 
     return None
 
@@ -98,9 +121,9 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# ---------------- FREE & STABLE MODEL ----------------
+# ---------------- FREE CHAT MODEL ----------------
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",  # ✅ FREE + UNLIMITED
+    model="llama-3.1-8b-instant",  # ✅ free & stable
     api_key=api_key,
     temperature=temperature,
     streaming=False
@@ -122,12 +145,12 @@ for msg in st.session_state.messages:
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- CHAT LOGIC ----------------
+# ---------------- CHAT HANDLER ----------------
 if prompt:
     if not st.session_state.system_added:
         st.session_state.messages.insert(
             0,
-            SystemMessage(content="You are a friendly, simple, and clear AI assistant.")
+            SystemMessage(content="You are a helpful assistant like ChatGPT.")
         )
         st.session_state.system_added = True
 
@@ -136,17 +159,14 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    local = smart_answer(prompt)
-
     with st.chat_message("assistant"):
+        local = smart_answer(prompt)
+
         if local:
             answer = local
         else:
-            try:
-                response = llm.invoke(st.session_state.messages)
-                answer = response.content
-            except Exception:
-                answer = "I’m here and ready. Please ask again."
+            response = llm.invoke(st.session_state.messages)
+            answer = response.content
 
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
