@@ -6,7 +6,6 @@ from groq import RateLimitError
 
 # ---------------- API KEY (STREAMLIT SAFE) ----------------
 api_key = st.secrets["GROQ_API_KEY"]
-
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="User GPT",
