@@ -1,9 +1,9 @@
 import streamlit as st
 import requests
 from datetime import datetime
+import time
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-import time
 
 # ---------------- API KEY ----------------
 api_key = st.secrets["GROQ_API_KEY"]
@@ -37,10 +37,7 @@ with st.sidebar:
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
-    feedback = st.text_area(
-        "Write your message here…",
-        placeholder="Type your feedback here..."
-    )
+    feedback = st.text_area("Write your message here…")
 
     if st.button("Send Feedback"):
         if feedback.strip():
@@ -50,65 +47,13 @@ with st.sidebar:
                     "name": "NeoMind AI User",
                     "email": "no-reply@neomind.ai",
                     "message": feedback
-                },
-                headers={"Accept": "application/json"}
+                }
             )
             st.success("✅ Feedback sent!")
         else:
             st.warning("Please write something")
 
     st.caption("Created by **Shashank N P**")
-
-# ---------------- THEME VARIABLES ----------------
-bg = "linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1f1c2c)"
-sidebar_bg = "#0b1f2a"
-text = "#ffffff"
-chat_input_bg = "#000000"
-border = "#ffffff"
-placeholder = "#bbbbbb"
-
-# ---------------- CSS (UNCHANGED) ----------------
-st.markdown(f"""
-<style>
-.stApp {{
-    background: {bg};
-    color: {text};
-}}
-
-[data-testid="stSidebar"] {{
-    background: {sidebar_bg};
-}}
-[data-testid="stSidebar"] * {{
-    color: {text} !important;
-}}
-
-[data-testid="stChatInput"] {{
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 10px !important;
-}}
-
-[data-testid="stChatInput"] textarea {{
-    background-color: {chat_input_bg} !important;
-    color: {text} !important;
-    border: 1.5px solid {border} !important;
-    border-radius: 8px !important;
-    padding: 14px 54px 14px 16px !important;
-    font-size: 16px !important;
-    min-height: 50px !important;
-}}
-
-[data-testid="stChatInput"] textarea::placeholder {{
-    color: {placeholder} !important;
-}}
-
-[data-testid="stChatInput"] button {{
-    background: transparent !important;
-    border: none !important;
-}}
-</style>
-""", unsafe_allow_html=True)
 
 # ---------------- CITY DATA ----------------
 BAR_DATA = {
@@ -169,7 +114,7 @@ for msg in st.session_state.messages:
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- CHAT HANDLER (FINAL FIX) ----------------
+# ---------------- CHAT HANDLER (FIXED) ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
 
@@ -187,34 +132,37 @@ if prompt:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
                 0,
-                SystemMessage(content="You are NeoMind AI. Be accurate, contextual and helpful.")
+                SystemMessage(
+                    content="You are NeoMind AI. Be accurate, contextual and helpful."
+                )
             )
             st.session_state.system_added = True
 
         with st.chat_message("assistant"):
-            box = st.empty()
+            placeholder_box = st.empty()
             full = ""
 
             try:
-                # TRY 1
+                # FIRST TRY
                 for chunk in llm.stream(st.session_state.messages):
                     if chunk.content:
                         full += chunk.content
-                        box.markdown(full, unsafe_allow_html=True)
+                        placeholder_box.markdown(full, unsafe_allow_html=True)
 
             except Exception:
-                time.sleep(3)  # silent wait
+                # SILENT WAIT
+                time.sleep(3)
 
                 try:
-                    # TRY 2
+                    # SECOND TRY
                     for chunk in llm.stream(st.session_state.messages):
                         if chunk.content:
                             full += chunk.content
-                            box.markdown(full, unsafe_allow_html=True)
+                            placeholder_box.markdown(full, unsafe_allow_html=True)
 
                 except Exception:
-                    # FINAL SAFE RESPONSE (NO ERROR MESSAGE)
-                    full = "Yes, I can help you with that. Please tell me what you’d like to know."
-                    box.markdown(full)
+                    # FINAL SAFE RESPONSE
+                    full = "I’m here and ready to help. What would you like to know?"
+                    placeholder_box.markdown(full)
 
         st.session_state.messages.append(AIMessage(content=full))
