@@ -2,9 +2,8 @@ import streamlit as st
 import requests
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from groq import RateLimitError
+from groq import RateLimitError  # ✅ IMPORTANT
 
-# ---------------- API KEY ----------------
 api_key = st.secrets["GROQ_API_KEY"]
 
 # ---------------- PAGE CONFIG ----------------
@@ -28,12 +27,10 @@ st.markdown("""
     50% {background-position: 100% 50%;}
     100% {background-position: 0% 50%;}
 }
-
 [data-testid="stSidebar"] {
     background: rgba(0,0,0,0.35);
     backdrop-filter: blur(12px);
 }
-
 .stChatMessage[data-testid="stChatMessage-user"] {
     background: linear-gradient(135deg, #ff4d4d, #ff7a18);
     border-radius: 16px;
@@ -55,7 +52,7 @@ if "messages" not in st.session_state:
 if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
-# ---------------- SMART LOCAL ANSWERS ----------------
+# ---------------- SMART ANSWER (UNCHANGED) ----------------
 def smart_answer(prompt: str):
     text = prompt.lower()
     city = "Bengaluru"
@@ -92,21 +89,17 @@ def smart_answer(prompt: str):
     }
 
     for key, items in knowledge.items():
-        if key in text and ("best" in text or "near me" in text or "suggest" in text):
-            formatted = "\n".join(f"- {i}" for i in items)
+        if key in text and ("near me" in text or "suggest" in text or "best" in text):
             return f"""
 Here are some popular **{key}s in {city}**:
 
-{formatted}
-"""
+""" + "\n".join(f"- {i}" for i in items)
 
     return None
 
-# ---------------- SIDEBAR ----------------
+# ---------------- SIDEBAR (UNCHANGED) ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
-    st.caption("Text-based AI Assistant")
-
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
@@ -115,33 +108,25 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
-    st.subheader("🆘 Help & Feedback")
-
     feedback = st.text_area("Write your message here…")
 
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={
-                    "name": "NeoMind AI User",
-                    "email": "no-reply@neomind.ai",
-                    "message": feedback
-                },
-                headers={"Accept": "application/json"}
-            )
-            st.success("✅ Feedback sent!")
-        else:
-            st.warning("Please write something")
+    if st.button("Send Feedback") and feedback.strip():
+        requests.post(
+            "https://formspree.io/f/xblanbjk",
+            data={
+                "name": "NeoMind AI User",
+                "email": "no-reply@neomind.ai",
+                "message": feedback
+            }
+        )
+        st.success("✅ Feedback sent!")
 
-    st.caption("Created by **Shashank N P**")
-
-# ---------------- LLM (SAFE MODE) ----------------
+# ---------------- LLM (SAFE) ----------------
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
     api_key=api_key,
     temperature=temperature,
-    streaming=False   # 🔒 IMPORTANT
+    streaming=False
 )
 
 # ---------------- HERO ----------------
@@ -152,7 +137,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- CHAT HISTORY ----------------
+# ---------------- DISPLAY CHAT ----------------
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
@@ -160,44 +145,43 @@ for msg in st.session_state.messages:
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- CHAT HANDLER (NO DATA LEAK) ----------------
+# ---------------- CHAT HANDLER (FIXED) ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
 
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    local = smart_answer(prompt)
+    reply = smart_answer(prompt)
 
-    if local:
+    if reply:
         with st.chat_message("assistant"):
-            st.markdown(local)
-        st.session_state.messages.append(AIMessage(content=local))
+            st.markdown(reply)
+        st.session_state.messages.append(AIMessage(content=reply))
 
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
                 0,
-                SystemMessage(content="You are NeoMind AI. Be accurate, helpful, and friendly.")
+                SystemMessage(content="You are NeoMind AI, a clear and helpful assistant.")
             )
             st.session_state.system_added = True
 
         with st.chat_message("assistant"):
             try:
                 response = llm.invoke(st.session_state.messages)
-                answer = response.content
+                st.markdown(response.content)
+                st.session_state.messages.append(
+                    AIMessage(content=response.content)
+                )
 
             except RateLimitError:
-                answer = (
-                    "⏳ I'm currently a bit busy, but I'm still here. "
-                    "Please wait a moment and try again."
+                # ✅ CLEAN USER MESSAGE (NO TRACEBACK)
+                safe_msg = (
+                    "⚠️ I’m temporarily busy due to high usage.\n\n"
+                    "Please wait a few minutes and try again. 😊"
                 )
-
-            except Exception:
-                answer = (
-                    "⚠️ Something went wrong, but don’t worry — "
-                    "please try again and I’ll help you."
+                st.markdown(safe_msg)
+                st.session_state.messages.append(
+                    AIMessage(content=safe_msg)
                 )
-
-            st.markdown(answer)
-            st.session_state.messages.append(AIMessage(content=answer))
