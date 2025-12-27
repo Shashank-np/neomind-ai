@@ -1,11 +1,9 @@
 import streamlit as st
+import os
 import requests
-from datetime import datetime
-import time
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
-# ---------------- API KEY ----------------
 api_key = st.secrets["GROQ_API_KEY"]
 
 # ---------------- PAGE CONFIG ----------------
@@ -15,6 +13,40 @@ st.set_page_config(
     layout="wide"
 )
 
+# ---------------- CSS (UNCHANGED UI, RESPONSIVE SAFE) ----------------
+st.markdown("""
+<style>
+.stApp {
+    background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #1f1c2c);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
+    color: white;
+}
+@keyframes gradientBG {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+}
+
+[data-testid="stSidebar"] {
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(12px);
+}
+
+.stChatMessage[data-testid="stChatMessage-user"] {
+    background: linear-gradient(135deg, #ff4d4d, #ff7a18);
+    border-radius: 16px;
+    padding: 12px;
+    color: black;
+}
+.stChatMessage[data-testid="stChatMessage-assistant"] {
+    background: rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 12px;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -22,8 +54,54 @@ if "messages" not in st.session_state:
 if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
-if "is_generating" not in st.session_state:
-    st.session_state.is_generating = False
+# ---------------- SMART CHATGPT-LIKE LOGIC ----------------
+def smart_answer(prompt: str):
+    text = prompt.lower()
+    city = "Bengaluru"   # default safe assumption
+
+    knowledge = {
+        "bar": [
+            "Toit – Indiranagar",
+            "Big Pitcher – Indiranagar",
+            "The Biere Club – Lavelle Road",
+            "Skyye – Rooftop Lounge",
+            "Drunken Daddy – Koramangala"
+        ],
+        "restaurant": [
+            "Meghana Foods",
+            "Truffles",
+            "Empire Restaurant",
+            "Absolute Barbeque",
+            "MTR"
+        ],
+        "cafe": [
+            "Third Wave Coffee",
+            "Glen's Bakehouse",
+            "The Hole in the Wall Cafe",
+            "Cafe Noir",
+            "Blue Tokai Coffee"
+        ],
+        "places": [
+            "Lalbagh Botanical Garden",
+            "Cubbon Park",
+            "Bangalore Palace",
+            "ISKCON Temple",
+            "Nandi Hills"
+        ]
+    }
+
+    for key, items in knowledge.items():
+        if key in text and ("near me" in text or "suggest" in text or "best" in text):
+            formatted = "\n".join(f"- {i}" for i in items)
+            return f"""
+Here are some popular **{key}s in {city}** you might like:
+
+{formatted}
+
+👉 Want suggestions for a **different city**? Just tell me the city name.
+"""
+
+    return None
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
@@ -35,35 +113,30 @@ with st.sidebar:
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.system_added = False
-        st.session_state.is_generating = False
         st.rerun()
 
-# ---------------- CITY DATA ----------------
-BAR_DATA = {
-    "bengaluru": [
-        "Toit – Indiranagar",
-        "Big Pitcher – Indiranagar",
-        "The Biere Club – Lavelle Road",
-        "Skyye – UB City",
-        "Drunken Daddy – Koramangala"
-    ]
-}
+    st.divider()
+    st.subheader("🆘 Help & Feedback")
 
-# ---------------- SMART ANSWER ----------------
-def smart_answer(prompt: str):
-    text = prompt.lower()
-    if "bar" not in text:
-        return None
+    feedback = st.text_area("Write your message here…")
 
-    now = datetime.now().strftime("%d %b %Y | %I:%M %p")
-    for city in BAR_DATA:
-        if city in text:
-            return (
-                f"🍺 **Best Bars in {city.title()}**\n"
-                f"🕒 {now}\n\n" +
-                "\n".join([f"- {b}" for b in BAR_DATA[city]])
+    if st.button("Send Feedback"):
+        if feedback.strip():
+            requests.post(
+                "https://formspree.io/f/xblanbjk",
+                data={
+                    "name": "NeoMind AI User",
+                    "email": "no-reply@neomind.ai",
+                    "message": feedback
+                },
+                headers={"Accept": "application/json"}
             )
-    return None
+            st.success("✅ Feedback sent to your email!")
+        else:
+            st.warning("Please write something")
+
+    st.divider()
+    st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
 llm = ChatGroq(
@@ -73,71 +146,52 @@ llm = ChatGroq(
     streaming=True
 )
 
-# ---------------- HERO ----------------
+# ---------------- HERO TITLE ----------------
 st.markdown("""
-<div style="margin-top:30vh;text-align:center;">
+<div style="margin-top:30vh; text-align:center;">
     <h1>💬 NeoMind AI</h1>
-    <p style="opacity:0.7;">Ask. Think. Generate.</p>
+    <p style="opacity:0.8;">Ask. Think. Generate.</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- CHAT HISTORY ----------------
+# ---------------- DISPLAY CHAT ----------------
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
-        st.markdown(msg.content, unsafe_allow_html=True)
+        st.markdown(msg.content)
 
-# ---------------- CHAT INPUT ----------------
+# ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- CHAT HANDLER (FINAL & CORRECT) ----------------
-if prompt and not st.session_state.is_generating:
+# ---------------- HANDLE CHAT ----------------
+if prompt:
+    st.session_state.messages.append(HumanMessage(content=prompt))
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-    clean_prompt = prompt.strip()
+    local_reply = smart_answer(prompt)
 
-    # 🚫 IGNORE NON-MEANINGFUL INPUT
-    if len(clean_prompt.split()) < 3:
-        pass  # do nothing, just wait for real input
-
+    if local_reply:
+        with st.chat_message("assistant"):
+            st.markdown(local_reply)
+        st.session_state.messages.append(AIMessage(content=local_reply))
     else:
-        st.session_state.is_generating = True
-        st.session_state.messages.append(HumanMessage(content=clean_prompt))
-
-        with st.chat_message("user"):
-            st.markdown(clean_prompt)
-
-        reply = smart_answer(clean_prompt)
-
-        if reply:
-            with st.chat_message("assistant"):
-                st.markdown(reply)
-            st.session_state.messages.append(AIMessage(content=reply))
-            st.session_state.is_generating = False
-
-        else:
-            if not st.session_state.system_added:
-                st.session_state.messages.insert(
-                    0,
-                    SystemMessage(
-                        content="You are NeoMind AI. Be accurate, contextual and helpful."
-                    )
+        if not st.session_state.system_added:
+            st.session_state.messages.insert(
+                0,
+                SystemMessage(
+                    content="You are NeoMind AI, a friendly, fast, and clear assistant."
                 )
-                st.session_state.system_added = True
+            )
+            st.session_state.system_added = True
 
-            with st.chat_message("assistant"):
-                box = st.empty()
-                full = ""
+        with st.chat_message("assistant"):
+            placeholder = st.empty()
+            full_response = ""
+            for chunk in llm.stream(st.session_state.messages):
+                if chunk.content:
+                    full_response += chunk.content
+                    placeholder.markdown(full_response)
 
-                try:
-                    for chunk in llm.stream(st.session_state.messages):
-                        if chunk.content:
-                            full += chunk.content
-                            box.markdown(full)
-                except Exception:
-                    time.sleep(2)
-                    for chunk in llm.stream(st.session_state.messages):
-                        if chunk.content:
-                            full += chunk.content
-                            box.markdown(full)
+        st.session_state.messages.append(AIMessage(content=full_response))
 
-            st.session_state.messages.append(AIMessage(content=full))
-            st.session_state.is_generating = False
+
