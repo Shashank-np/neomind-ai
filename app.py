@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-import re
+import math
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -8,44 +8,32 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 api_key = st.secrets["GROQ_API_KEY"]
 
 # ---------------- PAGE CONFIG ----------------
-st.set_page_config(
-    page_title="NeoMind AI",
-    page_icon="🧠",
-    layout="wide"
-)
+st.set_page_config(page_title="NeoMind AI", page_icon="🧠", layout="wide")
 
-# ---------------- SKY BLUE ANIMATED UI ----------------
+# ---------------- SKY BLUE UI ----------------
 st.markdown("""
 <style>
 .stApp {
-    background: linear-gradient(180deg, #dff3ff, #b6e6ff);
-    background-size: 200% 200%;
+    background: linear-gradient(180deg, #e6f7ff, #cceeff);
     animation: bgMove 12s ease infinite;
-    color: #003366;
 }
-
 @keyframes bgMove {
     0% {background-position: 0% 50%;}
     50% {background-position: 100% 50%;}
     100% {background-position: 0% 50%;}
 }
-
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #cfeeff, #a9dcff);
+    background: #d9f0ff;
 }
-
 .stChatMessage[data-testid="stChatMessage-user"] {
-    background: #4dabf7;
+    background: #74c0fc;
     color: black;
     border-radius: 16px;
-    padding: 12px;
 }
-
 .stChatMessage[data-testid="stChatMessage-assistant"] {
-    background: #ffffff;
+    background: white;
     color: #003366;
     border-radius: 16px;
-    padding: 12px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -54,76 +42,67 @@ st.markdown("""
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "system_added" not in st.session_state:
-    st.session_state.system_added = False
+if "last_place" not in st.session_state:
+    st.session_state.last_place = None
 
-# ---------------- CITY-AWARE SMART ANSWER ----------------
-def extract_city(text):
-    cities = ["bengaluru", "bangalore", "davanagere", "mysuru", "mangalore", "hubli"]
-    for city in cities:
-        if city in text:
-            return city.title()
+# ---------------- GEO HELPERS ----------------
+def get_coordinates(place):
+    url = "https://nominatim.openstreetmap.org/search"
+    params = {"q": place, "format": "json"}
+    r = requests.get(url, params=params, headers={"User-Agent": "NeoMindAI"})
+    if r.json():
+        return float(r.json()[0]["lat"]), float(r.json()[0]["lon"])
     return None
 
-def smart_answer(prompt: str):
-    text = prompt.lower()
-    city = extract_city(text)
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    return round(2 * R * math.atan2(math.sqrt(a), math.sqrt(1-a)), 2)
 
-    places = {
-        "Davanagere": {
-            "bar": ["Lion’s Bar", "Mehfil Bar", "Relax Bar"],
-            "places": ["Kunduvada Kere", "Anjaneya Temple", "Glass House"]
-        },
-        "Bengaluru": {
-            "bar": ["Toit", "Big Pitcher", "Skyye", "Drunken Daddy"],
-            "places": ["Lalbagh", "Cubbon Park", "ISKCON", "Bangalore Palace"]
-        }
+# ---------------- SMART LOCAL LOGIC ----------------
+def smart_answer(prompt):
+    text = prompt.lower()
+
+    bars_dvg = {
+        "Lion’s Bar": "Lion’s Bar Davanagere",
+        "Mehfil Bar": "Mehfil Bar Davanagere",
+        "Relax Bar": "Relax Bar Davanagere"
     }
 
-    for category in ["bar", "places"]:
-        if category in text:
-            if not city:
-                return "📍 Please tell me the city so I can give accurate suggestions."
-            if city in places and category in places[city]:
-                return f"Here are popular {category}s in **{city}**:\n\n" + \
-                       "\n".join(f"- {p}" for p in places[city][category])
+    if "bar" in text and "davanagere" in text:
+        st.session_state.last_place = list(bars_dvg.keys())[0]
+        return "Here are popular bars in **Davanagere**:\n\n" + "\n".join(f"- {b}" for b in bars_dvg)
+
+    if "distance" in text and "bus stand" in text:
+        if not st.session_state.last_place:
+            return "Please tell me which place you want distance for."
+
+        bus = get_coordinates("Davanagere Bus Stand")
+        bar = get_coordinates(f"{st.session_state.last_place} Davanagere")
+
+        if bus and bar:
+            dist = haversine(bus[0], bus[1], bar[0], bar[1])
+            return f"📍 **{st.session_state.last_place}** is approximately **{dist} km** from Davanagere Bus Stand."
+        else:
+            return "Sorry, I couldn’t fetch live map data."
 
     return None
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
-    st.caption("Text-based AI Assistant")
-
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
-
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
-        st.session_state.system_added = False
+        st.session_state.last_place = None
         st.rerun()
 
-    st.divider()
-    st.subheader("🆘 Help & Feedback")
-
-    feedback = st.text_area("Write your message here…")
-
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={
-                    "name": "NeoMind AI User",
-                    "email": "no-reply@neomind.ai",
-                    "message": feedback
-                }
-            )
-            st.success("✅ Feedback sent!")
-
-    st.caption("Created by **Shashank N P**")
-
-# ---------------- FREE CHAT MODEL ----------------
+# ---------------- FREE LLM ----------------
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",  # ✅ free & stable
+    model="llama-3.1-8b-instant",  # ✅ FREE & FAST
     api_key=api_key,
     temperature=temperature,
     streaming=False
@@ -131,37 +110,28 @@ llm = ChatGroq(
 
 # ---------------- HERO ----------------
 st.markdown("""
-<div style="margin-top:30vh; text-align:center;">
-    <h1>💬 NeoMind AI</h1>
-    <p>Ask. Think. Generate.</p>
+<div style="margin-top:30vh;text-align:center;">
+<h1>💬 NeoMind AI</h1>
+<p>Ask. Think. Generate.</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- DISPLAY CHAT ----------------
-for msg in st.session_state.messages:
-    with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
-        st.markdown(msg.content)
+# ---------------- CHAT HISTORY ----------------
+for m in st.session_state.messages:
+    with st.chat_message("user" if isinstance(m, HumanMessage) else "assistant"):
+        st.markdown(m.content)
 
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 # ---------------- CHAT HANDLER ----------------
 if prompt:
-    if not st.session_state.system_added:
-        st.session_state.messages.insert(
-            0,
-            SystemMessage(content="You are a helpful assistant like ChatGPT.")
-        )
-        st.session_state.system_added = True
-
     st.session_state.messages.append(HumanMessage(content=prompt))
-
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
         local = smart_answer(prompt)
-
         if local:
             answer = local
         else:
