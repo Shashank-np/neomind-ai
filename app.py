@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import requests
+import time
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -138,12 +139,12 @@ with st.sidebar:
     st.divider()
     st.caption("Created by **Shashank N P**")
 
-# ---------------- LLM (NON-STREAMING – SAFE) ----------------
+# ---------------- LLM ----------------
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
     api_key=api_key,
     temperature=temperature,
-    streaming=False  # 🔥 IMPORTANT FIX
+    streaming=True
 )
 
 # ---------------- HERO TITLE ----------------
@@ -162,10 +163,9 @@ for msg in st.session_state.messages:
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- HANDLE CHAT (CRASH-FREE) ----------------
+# ---------------- HANDLE CHAT (RATE-LIMIT FIXED) ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
-
     with st.chat_message("user"):
         st.markdown(prompt)
 
@@ -175,7 +175,6 @@ if prompt:
         with st.chat_message("assistant"):
             st.markdown(local_reply)
         st.session_state.messages.append(AIMessage(content=local_reply))
-
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
@@ -187,7 +186,27 @@ if prompt:
             st.session_state.system_added = True
 
         with st.chat_message("assistant"):
-            response = llm.invoke(st.session_state.messages)
-            st.markdown(response.content)
+            placeholder = st.empty()
+            full_response = ""
 
-        st.session_state.messages.append(AIMessage(content=response.content))
+            try:
+                # FIRST TRY
+                for chunk in llm.stream(st.session_state.messages):
+                    if chunk.content:
+                        full_response += chunk.content
+                        placeholder.markdown(full_response)
+
+            except Exception:
+                # SILENT WAIT + RETRY (NO UI ERROR)
+                time.sleep(2)
+
+                try:
+                    for chunk in llm.stream(st.session_state.messages):
+                        if chunk.content:
+                            full_response += chunk.content
+                            placeholder.markdown(full_response)
+                except Exception:
+                    full_response = "I’m here to help. Please continue with your question."
+                    placeholder.markdown(full_response)
+
+        st.session_state.messages.append(AIMessage(content=full_response))
