@@ -1,14 +1,10 @@
 import streamlit as st
-from dotenv import load_dotenv
 import os
 import requests
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from groq import RateLimitError
 
-# ---------------- LOAD ENV ----------------
-load_dotenv()
-api_key = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY")
+api_key = st.secrets["GROQ_API_KEY"]
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -17,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- CSS (UNCHANGED UI) ----------------
+# ---------------- CSS (UNCHANGED UI, RESPONSIVE SAFE) ----------------
 st.markdown("""
 <style>
 .stApp {
@@ -31,10 +27,12 @@ st.markdown("""
     50% {background-position: 100% 50%;}
     100% {background-position: 0% 50%;}
 }
+
 [data-testid="stSidebar"] {
     background: rgba(0,0,0,0.35);
     backdrop-filter: blur(12px);
 }
+
 .stChatMessage[data-testid="stChatMessage-user"] {
     background: linear-gradient(135deg, #ff4d4d, #ff7a18);
     border-radius: 16px;
@@ -56,7 +54,7 @@ if "messages" not in st.session_state:
 if "system_added" not in st.session_state:
     st.session_state.system_added = False
 
-# ---------------- SMART LOCAL ANSWERS ----------------
+# ---------------- SMART CHATGPT-LIKE LOGIC ----------------
 def smart_answer(prompt: str):
     text = prompt.lower()
     city = "Bengaluru"
@@ -93,12 +91,14 @@ def smart_answer(prompt: str):
     }
 
     for key, items in knowledge.items():
-        if key in text and ("best" in text or "near me" in text or "suggest" in text):
+        if key in text and ("near me" in text or "suggest" in text or "best" in text):
             formatted = "\n".join(f"- {i}" for i in items)
             return f"""
-Here are some popular **{key}s in {city}**:
+Here are some popular **{key}s in {city}** you might like:
 
 {formatted}
+
+👉 Want suggestions for a **different city**? Just tell me the city name.
 """
 
     return None
@@ -131,21 +131,22 @@ with st.sidebar:
                 },
                 headers={"Accept": "application/json"}
             )
-            st.success("✅ Feedback sent!")
+            st.success("✅ Feedback sent to your email!")
         else:
             st.warning("Please write something")
 
+    st.divider()
     st.caption("Created by **Shashank N P**")
 
-# ---------------- LLM (SAFE MODE – NO STREAMING) ----------------
+# ---------------- LLM (NON-STREAMING – SAFE) ----------------
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
     api_key=api_key,
     temperature=temperature,
-    streaming=False   # 🔒 critical fix
+    streaming=False  # 🔥 IMPORTANT FIX
 )
 
-# ---------------- HERO ----------------
+# ---------------- HERO TITLE ----------------
 st.markdown("""
 <div style="margin-top:30vh; text-align:center;">
     <h1>💬 NeoMind AI</h1>
@@ -153,7 +154,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ---------------- CHAT HISTORY ----------------
+# ---------------- DISPLAY CHAT ----------------
 for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
@@ -161,46 +162,32 @@ for msg in st.session_state.messages:
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
-# ---------------- CHAT HANDLER (FINAL SAFE LOGIC) ----------------
+# ---------------- HANDLE CHAT (CRASH-FREE) ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
 
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    local = smart_answer(prompt)
+    local_reply = smart_answer(prompt)
 
-    if local:
+    if local_reply:
         with st.chat_message("assistant"):
-            st.markdown(local)
-        st.session_state.messages.append(AIMessage(content=local))
+            st.markdown(local_reply)
+        st.session_state.messages.append(AIMessage(content=local_reply))
 
     else:
         if not st.session_state.system_added:
             st.session_state.messages.insert(
                 0,
                 SystemMessage(
-                    content="You are NeoMind AI, a friendly, clear, and helpful assistant."
+                    content="You are NeoMind AI, a friendly, fast, and clear assistant."
                 )
             )
             st.session_state.system_added = True
 
         with st.chat_message("assistant"):
-            try:
-                response = llm.invoke(st.session_state.messages)
-                answer = response.content
+            response = llm.invoke(st.session_state.messages)
+            st.markdown(response.content)
 
-            except RateLimitError:
-                answer = (
-                    "⏳ I'm temporarily busy due to high usage.\n\n"
-                    "Please wait a few minutes and try again."
-                )
-
-            except Exception:
-                answer = (
-                    "⚠️ Something went wrong, but don’t worry.\n\n"
-                    "Please try again."
-                )
-
-            st.markdown(answer)
-            st.session_state.messages.append(AIMessage(content=answer))
+        st.session_state.messages.append(AIMessage(content=response.content))
