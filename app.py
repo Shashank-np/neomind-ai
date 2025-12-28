@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 from langchain_groq import ChatGroq
@@ -48,18 +48,16 @@ if "messages" not in st.session_state:
 if "last_place" not in st.session_state:
     st.session_state.last_place = None
 
-# ---------------- USER LOCATION & TIMEZONE (MAP / IP BASED) ----------------
+# ---------------- USER LOCATION & TIMEZONE ----------------
 def get_user_context():
     try:
         res = requests.get("https://ipapi.co/json/").json()
         timezone = pytz.timezone(res.get("timezone", "UTC"))
-        city = res.get("city", "")
-        country = res.get("country_name", "")
-        return timezone, city, country
+        return timezone
     except:
-        return pytz.UTC, "", ""
+        return pytz.UTC
 
-tz, user_city, user_country = get_user_context()
+tz = get_user_context()
 
 # ---------------- GEO HELPERS ----------------
 def get_coordinates(place):
@@ -78,26 +76,38 @@ def haversine(lat1, lon1, lat2, lon2):
     a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
     return round(2 * R * math.atan2(math.sqrt(a), math.sqrt(1-a)), 2)
 
-# ---------------- SMART LOCAL LOGIC (DATE / DAY / TIME FIXED) ----------------
+# ---------------- SMART LOCAL LOGIC (UPDATED) ----------------
 def smart_answer(prompt):
     text = prompt.lower()
     now = datetime.now(tz)
 
-    # ✅ DATE / DAY / TIME / LOCATION (EXACT & LIVE)
+    # ✅ DASARA / DUSSEHRA (CHATGPT STYLE RESPONSE)
+    if "dasara" in text or "dussehra" in text:
+        return (
+            "Next year’s **Dasara (Dussehra)** date is based on the **Hindu lunar calendar**, "
+            "and does **not fall on the same Gregorian date each year**.\n\n"
+            "✅ **For the year 2026, Dasara (Dussehra) is widely observed on:**\n\n"
+            "📅 **Saturday, 24 October 2026**\n\n"
+            "This is the date when the festival is celebrated in most parts of India "
+            "according to traditional calendar calculations."
+        )
+
+    # ✅ TOMORROW
+    if "tomorrow" in text:
+        tmr = now + timedelta(days=1)
+        return f"📅 **Tomorrow’s date:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
+
+    # ✅ TIME
     if "time" in text:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
 
-    if "today" in text or "date" in text:
+    # ✅ TODAY / DATE
+    if "today" in text or text.strip() == "date":
         return f"📅 **Today’s date:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
+    # ✅ DAY
     if "day" in text:
         return f"📆 **Today is:** {now.strftime('%A')}"
-
-    if "location" in text or "where am i" in text:
-        if user_city:
-            return f"📍 **Your location:** {user_city}, {user_country}"
-        else:
-            return "📍 Unable to detect your exact location."
 
     # ---- EXISTING BAR LOGIC (UNCHANGED) ----
     bars_dvg = {
@@ -120,8 +130,6 @@ def smart_answer(prompt):
         if bus and bar:
             dist = haversine(bus[0], bus[1], bar[0], bar[1])
             return f"📍 **{st.session_state.last_place}** is approximately **{dist} km** from Davanagere Bus Stand."
-        else:
-            return "Sorry, I couldn’t fetch live map data."
 
     return None
 
@@ -155,8 +163,6 @@ with st.sidebar:
                 headers={"Accept": "application/json"}
             )
             st.success("✅ Feedback sent successfully!")
-        else:
-            st.warning("Please write something before sending.")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
