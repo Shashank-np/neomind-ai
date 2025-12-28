@@ -13,11 +13,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- FINAL DARK UI (ASSISTANT TEXT FIXED) ----------------
+# ---------------- LIGHT SKY-BLUE UI ----------------
 st.markdown("""
 <style>
 
-/* REMOVE STREAMLIT WHITE AREAS */
+/* REMOVE DEFAULT HEADER / FOOTER */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {
     background: transparent !important;
@@ -25,78 +25,64 @@ st.markdown("""
 
 /* MAIN BACKGROUND */
 .stApp {
-    background: linear-gradient(135deg, #0b0e14, #1b1f2a);
-    color: white;
+    background: linear-gradient(180deg, #e6f7ff, #cceeff);
+    animation: bgMove 12s ease infinite;
+    color: #003366;
+}
+
+@keyframes bgMove {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
 }
 
 /* SIDEBAR */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0b0e14, #151923);
+    background: #d9f0ff;
 }
 [data-testid="stSidebar"] * {
-    color: white !important;
+    color: #003366 !important;
 }
 
 /* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] {
-    background: #6b7280;
+    background: #bde3ff;
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-user"] * {
-    color: #ffffff !important;
+    color: #003366 !important;
 }
 
-/* 🔥 ASSISTANT MESSAGE – FORCE PURE WHITE TEXT */
+/* ASSISTANT MESSAGE */
 .stChatMessage[data-testid="stChatMessage-assistant"] {
-    background: #111827;
+    background: #ffffff;
     border-radius: 14px;
 }
-
-/* FORCE ALL POSSIBLE TEXT ELEMENTS */
-.stChatMessage[data-testid="stChatMessage-assistant"] *,
-.stChatMessage[data-testid="stChatMessage-assistant"] p,
-.stChatMessage[data-testid="stChatMessage-assistant"] span,
-.stChatMessage[data-testid="stChatMessage-assistant"] div,
-.stChatMessage[data-testid="stChatMessage-assistant"] li,
-.stChatMessage[data-testid="stChatMessage-assistant"] strong,
-.stChatMessage[data-testid="stChatMessage-assistant"] em,
-.stChatMessage[data-testid="stChatMessage-assistant"] code {
-    color: #ffffff !important;
-    opacity: 1 !important;
+.stChatMessage[data-testid="stChatMessage-assistant"] * {
+    color: #003366 !important;
 }
 
-/* CHAT INPUT OUTER BACKGROUND */
+/* CHAT INPUT WRAPPER */
 [data-testid="stChatInput"] {
-    background: #0b0e14 !important;
-}
-
-/* REMOVE INNER WRAPPER */
-[data-testid="stChatInput"] > div {
     background: transparent !important;
 }
 
 /* INPUT BOX */
 [data-testid="stChatInput"] textarea {
     background: white !important;
-    color: black !important;
-    border-radius: 26px !important;
-    border: 2px solid black !important;
+    color: #003366 !important;
+    border-radius: 24px !important;
+    border: 1.5px solid #aaccee !important;
     padding: 14px 50px 14px 18px !important;
-    box-shadow: none !important;
-}
-
-/* REMOVE DOUBLE FRAME */
-[data-testid="stChatInput"] textarea:focus {
-    outline: none !important;
     box-shadow: none !important;
 }
 
 /* PLACEHOLDER */
 [data-testid="stChatInput"] textarea::placeholder {
-    color: #6b7280 !important;
+    color: #7aa7c7 !important;
 }
 
-/* SEND BUTTON – NO CIRCLE */
+/* SEND BUTTON */
 [data-testid="stChatInput"] button {
     background: transparent !important;
     border: none !important;
@@ -104,19 +90,19 @@ st.markdown("""
 
 /* SEND ARROW */
 [data-testid="stChatInput"] button svg {
-    fill: black !important;
+    fill: #7aa7c7 !important;
     width: 22px !important;
     height: 22px !important;
 }
 
 /* GENERAL BUTTONS */
 button {
-    background: transparent !important;
-    border: 1px solid #374151 !important;
-    color: white !important;
+    background: white !important;
+    border: 1px solid #aaccee !important;
+    color: #003366 !important;
 }
 button:hover {
-    border-color: white !important;
+    background: #eef7ff !important;
 }
 
 </style>
@@ -141,15 +127,15 @@ def smart_answer(prompt):
     text = prompt.lower()
     now = datetime.now(tz)
 
+    if "time" in text:
+        return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
+
     if "tomorrow" in text:
         tmr = now + timedelta(days=1)
         return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
 
-    if "time" in text:
-        return f"⏰ **{now.strftime('%I:%M %p')}**"
-
     if "today" in text or text.strip() == "date":
-        return f"📅 **{now.strftime('%d %B %Y')} ({now.strftime('%A')})**"
+        return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
     return None
 
@@ -158,11 +144,24 @@ with st.sidebar:
     st.title("🧠 NeoMind AI")
     st.caption("Text-based AI Assistant")
 
-    temperature = st.slider("Creativity", 0.0, 1.0, 0.5)
+    temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.rerun()
+
+    st.divider()
+    st.subheader("🆘 Help & Feedback")
+    feedback = st.text_area("Share your feedback or suggestions")
+
+    if st.button("Send Feedback"):
+        if feedback.strip():
+            requests.post(
+                "https://formspree.io/f/xblanbjk",
+                data={"message": feedback},
+                headers={"Accept": "application/json"}
+            )
+            st.success("✅ Feedback sent!")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -177,7 +176,7 @@ llm = ChatGroq(
 # ---------------- HERO ----------------
 st.markdown("""
 <div style="margin-top:30vh;text-align:center;">
-<h1>🧠 NeoMind AI</h1>
+<h1>💬 NeoMind AI</h1>
 <p>Ask. Think. Generate.</p>
 </div>
 """, unsafe_allow_html=True)
