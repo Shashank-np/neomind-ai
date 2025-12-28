@@ -13,11 +13,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- FIXED SKY-BLUE UI (MOBILE + DESKTOP SAFE) ----------------
+# ---------------- SKY-BLUE UI (MATCHES IMAGE 1 EXACTLY) ----------------
 st.markdown("""
 <style>
 
-/* REMOVE STREAMLIT HEADER / FOOTER */
+/* REMOVE HEADER / FOOTER */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {
     background: transparent !important;
@@ -39,46 +39,43 @@ st.markdown("""
 
 /* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] {
-    background: #bde3ff !important;
+    background: #d9f0ff !important;
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-user"] * {
     color: #003366 !important;
 }
 
-/* ✅ ASSISTANT MESSAGE – FORCE COLOR FOR MOBILE */
+/* ASSISTANT MESSAGE */
 .stChatMessage[data-testid="stChatMessage-assistant"] {
     background: #ffffff !important;
     border-radius: 14px;
 }
 
-/* 🔥 CRITICAL FIX — FORCE TEXT COLOR DEEPLY */
+/* 🔥 FORCE ASSISTANT TEXT COLOR (MOBILE SAFE) */
 .stChatMessage[data-testid="stChatMessage-assistant"] *,
 .stChatMessage[data-testid="stChatMessage-assistant"] p,
 .stChatMessage[data-testid="stChatMessage-assistant"] span,
 .stChatMessage[data-testid="stChatMessage-assistant"] li,
 .stChatMessage[data-testid="stChatMessage-assistant"] strong,
-.stChatMessage[data-testid="stChatMessage-assistant"] em,
-.stChatMessage[data-testid="stChatMessage-assistant"] code {
+.stChatMessage[data-testid="stChatMessage-assistant"] em {
     color: #003366 !important;
     opacity: 1 !important;
-    visibility: visible !important;
 }
 
-/* CHAT INPUT WRAPPER */
+/* CHAT INPUT CONTAINER */
 [data-testid="stChatInput"] {
     background: transparent !important;
 }
 
-/* INPUT BOX */
+/* CHAT INPUT BOX – MATCH IMAGE 1 */
 [data-testid="stChatInput"] textarea {
     background: #ffffff !important;
     color: #003366 !important;
     border-radius: 999px !important;
     border: 1.5px solid #aaccee !important;
-    padding: 14px 56px 14px 20px !important;
+    padding: 14px 52px 14px 20px !important;
     box-shadow: none !important;
-    outline: none !important;
 }
 
 /* REMOVE DOUBLE BORDER */
@@ -107,7 +104,7 @@ st.markdown("""
 
 /* GENERAL BUTTONS */
 button {
-    background: white !important;
+    background: #ffffff !important;
     border: 1px solid #aaccee !important;
     color: #003366 !important;
 }
