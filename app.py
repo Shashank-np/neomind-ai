@@ -13,11 +13,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- FINAL DARK UI (ABSOLUTELY FIXED) ----------------
+# ---------------- FINAL DARK UI (ASSISTANT TEXT FIXED) ----------------
 st.markdown("""
 <style>
 
-/* REMOVE STREAMLIT DEFAULT WHITE AREAS */
+/* REMOVE STREAMLIT WHITE AREAS */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {
     background: transparent !important;
@@ -43,36 +43,49 @@ st.markdown("""
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-user"] * {
-    color: white !important;
+    color: #ffffff !important;
 }
 
-/* ASSISTANT MESSAGE – PURE WHITE TEXT */
+/* 🔥 ASSISTANT MESSAGE – FORCE PURE WHITE TEXT */
 .stChatMessage[data-testid="stChatMessage-assistant"] {
     background: #111827;
     border-radius: 14px;
 }
-.stChatMessage[data-testid="stChatMessage-assistant"] * {
+
+/* FORCE ALL POSSIBLE TEXT ELEMENTS */
+.stChatMessage[data-testid="stChatMessage-assistant"] *,
+.stChatMessage[data-testid="stChatMessage-assistant"] p,
+.stChatMessage[data-testid="stChatMessage-assistant"] span,
+.stChatMessage[data-testid="stChatMessage-assistant"] div,
+.stChatMessage[data-testid="stChatMessage-assistant"] li,
+.stChatMessage[data-testid="stChatMessage-assistant"] strong,
+.stChatMessage[data-testid="stChatMessage-assistant"] em,
+.stChatMessage[data-testid="stChatMessage-assistant"] code {
     color: #ffffff !important;
-    font-weight: 500;
+    opacity: 1 !important;
 }
 
-/* REMOVE CHAT INPUT BACKGROUND */
-[data-testid="stChatInput"],
+/* CHAT INPUT OUTER BACKGROUND */
+[data-testid="stChatInput"] {
+    background: #0b0e14 !important;
+}
+
+/* REMOVE INNER WRAPPER */
 [data-testid="stChatInput"] > div {
     background: transparent !important;
 }
 
-/* CHAT INPUT – SINGLE BLACK BORDER */
+/* INPUT BOX */
 [data-testid="stChatInput"] textarea {
     background: white !important;
     color: black !important;
     border-radius: 26px !important;
     border: 2px solid black !important;
-    padding: 14px 48px 14px 18px !important;
+    padding: 14px 50px 14px 18px !important;
     box-shadow: none !important;
 }
 
-/* REMOVE INNER FRAME */
+/* REMOVE DOUBLE FRAME */
 [data-testid="stChatInput"] textarea:focus {
     outline: none !important;
     box-shadow: none !important;
@@ -87,12 +100,9 @@ st.markdown("""
 [data-testid="stChatInput"] button {
     background: transparent !important;
     border: none !important;
-    width: auto !important;
-    height: auto !important;
-    margin-right: 10px !important;
 }
 
-/* SEND ARROW – BLACK ONLY */
+/* SEND ARROW */
 [data-testid="stChatInput"] button svg {
     fill: black !important;
     width: 22px !important;
@@ -126,29 +136,20 @@ def get_timezone():
 
 tz = get_timezone()
 
-# ---------------- SMART LOGIC (UNCHANGED) ----------------
+# ---------------- SMART LOGIC ----------------
 def smart_answer(prompt):
     text = prompt.lower()
     now = datetime.now(tz)
 
-    if "dasara" in text or "dussehra" in text:
-        return (
-            "Next year’s **Dasara (Dussehra)** date is based on the **Hindu lunar calendar**.\n\n"
-            "📅 **Saturday, 24 October 2026**"
-        )
-
     if "tomorrow" in text:
         tmr = now + timedelta(days=1)
-        return f"📅 **Tomorrow’s date:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
+        return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
 
     if "time" in text:
-        return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
+        return f"⏰ **{now.strftime('%I:%M %p')}**"
 
     if "today" in text or text.strip() == "date":
-        return f"📅 **Today’s date:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
-
-    if "day" in text:
-        return f"📆 **Today is:** {now.strftime('%A')}"
+        return f"📅 **{now.strftime('%d %B %Y')} ({now.strftime('%A')})**"
 
     return None
 
@@ -162,19 +163,6 @@ with st.sidebar:
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.rerun()
-
-    st.divider()
-    st.subheader("🆘 Help & Feedback")
-    feedback = st.text_area("Type your feedback here...")
-
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={"message": feedback},
-                headers={"Accept": "application/json"}
-            )
-            st.success("✅ Feedback sent!")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -213,8 +201,7 @@ if prompt:
         if local:
             answer = local
         else:
-            response = llm.invoke(st.session_state.messages)
-            answer = response.content
+            answer = llm.invoke(st.session_state.messages).content
 
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
