@@ -13,11 +13,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- SKY-BLUE UI (MATCHES IMAGE 1 EXACTLY) ----------------
+# ---------------- FINAL SKY-BLUE UI (DESKTOP + MOBILE FIXED) ----------------
 st.markdown("""
 <style>
 
-/* REMOVE HEADER / FOOTER */
+/* REMOVE STREAMLIT TOP/BOTTOM BARS */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {
     background: transparent !important;
@@ -39,36 +39,40 @@ st.markdown("""
 
 /* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] {
-    background: #d9f0ff !important;
+    background: #bde3ff !important;
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-user"] * {
     color: #003366 !important;
 }
 
-/* ASSISTANT MESSAGE */
+/* ASSISTANT MESSAGE (FORCE READABLE ON MOBILE) */
 .stChatMessage[data-testid="stChatMessage-assistant"] {
     background: #ffffff !important;
     border-radius: 14px;
 }
-
-/* 🔥 FORCE ASSISTANT TEXT COLOR (MOBILE SAFE) */
-.stChatMessage[data-testid="stChatMessage-assistant"] *,
-.stChatMessage[data-testid="stChatMessage-assistant"] p,
-.stChatMessage[data-testid="stChatMessage-assistant"] span,
-.stChatMessage[data-testid="stChatMessage-assistant"] li,
-.stChatMessage[data-testid="stChatMessage-assistant"] strong,
-.stChatMessage[data-testid="stChatMessage-assistant"] em {
+.stChatMessage[data-testid="stChatMessage-assistant"] * {
     color: #003366 !important;
     opacity: 1 !important;
 }
 
-/* CHAT INPUT CONTAINER */
+/* ===== CHAT INPUT FIX (IMPORTANT PART) ===== */
+
+/* REMOVE MOBILE OUTER WRAPPER */
 [data-testid="stChatInput"] {
     background: transparent !important;
+    padding: 0 !important;
+    border: none !important;
 }
 
-/* CHAT INPUT BOX – MATCH IMAGE 1 */
+/* REMOVE EXTRA MOBILE FRAME */
+[data-testid="stChatInput"] > div {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* REAL INPUT BOX (MATCH SECOND IMAGE) */
 [data-testid="stChatInput"] textarea {
     background: #ffffff !important;
     color: #003366 !important;
@@ -76,9 +80,10 @@ st.markdown("""
     border: 1.5px solid #aaccee !important;
     padding: 14px 52px 14px 20px !important;
     box-shadow: none !important;
+    outline: none !important;
 }
 
-/* REMOVE DOUBLE BORDER */
+/* REMOVE DOUBLE BORDER ON FOCUS */
 [data-testid="stChatInput"] textarea:focus {
     outline: none !important;
     box-shadow: none !important;
@@ -89,10 +94,11 @@ st.markdown("""
     color: #7aa7c7 !important;
 }
 
-/* SEND BUTTON */
+/* SEND BUTTON (NO BACKGROUND CIRCLE) */
 [data-testid="stChatInput"] button {
     background: transparent !important;
     border: none !important;
+    padding: 0 !important;
 }
 
 /* SEND ARROW */
@@ -104,7 +110,7 @@ st.markdown("""
 
 /* GENERAL BUTTONS */
 button {
-    background: #ffffff !important;
+    background: white !important;
     border: 1px solid #aaccee !important;
     color: #003366 !important;
 }
