@@ -1,132 +1,114 @@
 import streamlit as st
 import requests
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
+import random
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 
-# ---------------- API KEY ----------------
-api_key = st.secrets["GROQ_API_KEY"]
-
 # ---------------- PAGE CONFIG ----------------
-st.set_page_config(page_title="NeoMind AI", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="NeoMind AI", page_icon="🌙", layout="wide")
 
-# ---------------- LIGHT PURPLE ANIMATED UI ----------------
-st.markdown("""
+# ---------------- NIGHT SKY + STARS ----------------
+stars = "".join(
+    f"<span class='star' style='top:{random.randint(0,100)}%;left:{random.randint(0,100)}%;animation-delay:{random.random()*5}s'></span>"
+    for _ in range(80)
+)
+
+st.markdown(f"""
 <style>
-.stApp {
-    background: linear-gradient(-45deg, #f3e8ff, #e9d5ff, #ede9fe, #f5f3ff);
-    background-size: 400% 400%;
-    animation: purpleBG 14s ease infinite;
-}
-@keyframes purpleBG {
-    0% {background-position: 0% 50%;}
-    50% {background-position: 100% 50%;}
-    100% {background-position: 0% 50%;}
-}
-[data-testid="stSidebar"] {
-    background: #ede9fe;
-}
-.stChatMessage[data-testid="stChatMessage-user"] {
-    background: #c4b5fd;
-    color: black;
-    border-radius: 16px;
-}
-.stChatMessage[data-testid="stChatMessage-assistant"] {
+.stApp {{
+    background: linear-gradient(180deg, #050b2e, #020617);
+    color: white;
+    overflow: hidden;
+}}
+
+.star {{
+    position: fixed;
+    width: 2px;
+    height: 2px;
     background: white;
-    color: #312e81;
-    border-radius: 16px;
-}
+    border-radius: 50%;
+    opacity: 0.8;
+    animation: twinkle 3s infinite ease-in-out;
+}}
+
+@keyframes twinkle {{
+    0% {{ opacity: 0.2; }}
+    50% {{ opacity: 1; }}
+    100% {{ opacity: 0.2; }}
+}}
+
+[data-testid="stSidebar"] {{
+    background: #020617;
+}}
+
+.stChatMessage[data-testid="stChatMessage-user"] {{
+    background: #1e293b;
+    color: white;
+    border-radius: 14px;
+}}
+
+.stChatMessage[data-testid="stChatMessage-assistant"] {{
+    background: #020617;
+    color: #e5e7eb;
+    border-radius: 14px;
+}}
 </style>
+{stars}
 """, unsafe_allow_html=True)
 
 # ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "last_place" not in st.session_state:
-    st.session_state.last_place = None
+# ---------------- USER LOCATION & TIMEZONE ----------------
+def get_user_timezone():
+    try:
+        res = requests.get("https://ipapi.co/json/").json()
+        return pytz.timezone(res.get("timezone", "UTC"))
+    except:
+        return pytz.UTC
 
-# ---------------- TIMEZONE ----------------
-ist = pytz.timezone("Asia/Kolkata")
+tz = get_user_timezone()
 
-# ---------------- GEO HELPERS ----------------
-def get_coordinates(place):
-    url = "https://nominatim.openstreetmap.org/search"
-    params = {"q": place, "format": "json"}
-    r = requests.get(url, params=params, headers={"User-Agent": "NeoMindAI"})
-    if r.json():
-        return float(r.json()[0]["lat"]), float(r.json()[0]["lon"])
-    return None
-
-def haversine(lat1, lon1, lat2, lon2):
-    R = 6371
-    phi1, phi2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlambda = math.radians(lon2 - lon1)
-    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
-    return round(2 * R * math.atan2(math.sqrt(a), math.sqrt(1-a)), 2)
-
-# ---------------- SMART LOCAL LOGIC ----------------
-def smart_answer(prompt):
+# ---------------- SMART DATE & TIME ----------------
+def date_time_answer(prompt):
     text = prompt.lower()
-    now = datetime.now(ist)
+    now = datetime.now(tz)
 
-    # ✅ FORCE DATE / TIME (MATCH FIRST IMAGE)
     if "time" in text:
-        return f"⏰ **Current time is {now.strftime('%I:%M %p')} IST.**"
+        return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
 
-    if "date" in text or "today" in text:
-        return f"📅 **Today’s date is {now.strftime('%d %B %Y')}.**"
+    if "today" in text:
+        return f"📅 **Today’s date:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
-    bars_dvg = {
-        "Lion’s Bar": "Lion’s Bar Davanagere",
-        "Mehfil Bar": "Mehfil Bar Davanagere",
-        "Relax Bar": "Relax Bar Davanagere"
-    }
+    if "tomorrow" in text:
+        tmr = now + timedelta(days=1)
+        return f"📅 **Tomorrow’s date:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
 
-    if "bar" in text and "davanagere" in text:
-        st.session_state.last_place = list(bars_dvg.keys())[0]
-        return "Here are popular bars in **Davanagere**:\n\n" + "\n".join(f"- {b}" for b in bars_dvg)
+    if "yesterday" in text:
+        yest = now - timedelta(days=1)
+        return f"📅 **Yesterday’s date:** {yest.strftime('%d %B %Y')} ({yest.strftime('%A')})"
 
-    if "distance" in text and "bus stand" in text:
-        if not st.session_state.last_place:
-            return "Please tell me which place you want distance for."
+    if "date" in text:
+        return f"📅 **Today’s date:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
-        bus = get_coordinates("Davanagere Bus Stand")
-        bar = get_coordinates(f"{st.session_state.last_place} Davanagere")
-
-        if bus and bar:
-            dist = haversine(bus[0], bus[1], bar[0], bar[1])
-            return f"📍 **{st.session_state.last_place}** is approximately **{dist} km** from Davanagere Bus Stand."
+    if "day" in text:
+        return f"📆 **Today is:** {now.strftime('%A')}"
 
     return None
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
-    st.title("🧠 NeoMind AI")
+    st.title("🌙 NeoMind AI")
     temperature = st.slider("Creativity", 0.0, 1.0, 0.5)
 
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
-        st.session_state.last_place = None
         st.rerun()
-
-    st.divider()
-    st.subheader("🆘 Help & Feedback")
-
-    feedback = st.text_area("Write your message here…")
-
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={"message": feedback},
-                headers={"Accept": "application/json"}
-            )
-            st.success("✅ Feedback sent!")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -134,15 +116,14 @@ with st.sidebar:
 # ---------------- FREE LLM ----------------
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
-    api_key=api_key,
+    api_key=st.secrets["GROQ_API_KEY"],
     temperature=temperature,
-    streaming=False
 )
 
 # ---------------- HERO ----------------
 st.markdown("""
 <div style="margin-top:30vh;text-align:center;">
-<h1>💬 NeoMind AI</h1>
+<h1>🌌 NeoMind AI</h1>
 <p>Ask. Think. Generate.</p>
 </div>
 """, unsafe_allow_html=True)
@@ -162,7 +143,8 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        local = smart_answer(prompt)
+        local = date_time_answer(prompt)
+
         if local:
             answer = local
         else:
