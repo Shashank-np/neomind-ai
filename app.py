@@ -114,7 +114,7 @@ def smart_answer(prompt):
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
-    temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
+    temperature = st.slider("Creativity", 0.0, 1.0, 0.5)
 
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
@@ -188,3 +188,4 @@ if prompt:
 
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
+
