@@ -13,23 +13,30 @@ api_key = st.secrets["GROQ_API_KEY"]
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="NeoMind AI", page_icon="🧠", layout="wide")
 
-# ---------------- SKY BLUE UI ----------------
+# ---------------- LIGHT PURPLE ANIMATED UI ----------------
 st.markdown("""
 <style>
 .stApp {
-    background: linear-gradient(180deg, #e6f7ff, #cceeff);
+    background: linear-gradient(-45deg, #f3e8ff, #e9d5ff, #ede9fe, #f5f3ff);
+    background-size: 400% 400%;
+    animation: purpleBG 14s ease infinite;
+}
+@keyframes purpleBG {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
 }
 [data-testid="stSidebar"] {
-    background: #d9f0ff;
+    background: #ede9fe;
 }
 .stChatMessage[data-testid="stChatMessage-user"] {
-    background: #74c0fc;
+    background: #c4b5fd;
     color: black;
     border-radius: 16px;
 }
 .stChatMessage[data-testid="stChatMessage-assistant"] {
     background: white;
-    color: #003366;
+    color: #312e81;
     border-radius: 16px;
 }
 </style>
@@ -67,12 +74,12 @@ def smart_answer(prompt):
     text = prompt.lower()
     now = datetime.now(ist)
 
-    # ✅ DATE / TIME OVERRIDE (THIS FIXES YOUR ISSUE)
+    # ✅ FORCE DATE / TIME (MATCH FIRST IMAGE)
     if "time" in text:
-        return f"⏰ Current time is **{now.strftime('%I:%M %p')} IST**."
+        return f"⏰ **Current time is {now.strftime('%I:%M %p')} IST.**"
 
     if "date" in text or "today" in text:
-        return f"📅 Today's date is **{now.strftime('%d-%m-%Y')}**."
+        return f"📅 **Today’s date is {now.strftime('%d %B %Y')}.**"
 
     bars_dvg = {
         "Lion’s Bar": "Lion’s Bar Davanagere",
