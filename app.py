@@ -13,39 +13,72 @@ api_key = st.secrets["GROQ_API_KEY"]
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="NeoMind AI", page_icon="🧠", layout="wide")
 
-# ---------------- SKY BLUE UI ----------------
+# ---------------- DARK AI BACKGROUND THEME ----------------
 st.markdown("""
 <style>
+
+/* REMOVE TOP WHITE BAR */
+[data-testid="stHeader"] {
+    background: transparent;
+}
+
+/* MAIN BACKGROUND */
 .stApp {
-    background: linear-gradient(180deg, #e6f7ff, #cceeff);
-    animation: bgMove 12s ease infinite;
+    background: radial-gradient(circle at center, #1b1f2a, #0b0e14);
+    color: #e5e7eb;
 }
-@keyframes bgMove {
-    0% {background-position: 0% 50%;}
-    50% {background-position: 100% 50%;}
-    100% {background-position: 0% 50%;}
-}
+
+/* SIDEBAR */
 [data-testid="stSidebar"] {
-    background: #d9f0ff;
+    background: linear-gradient(180deg, #151923, #0b0e14);
+    color: #e5e7eb;
+}
+[data-testid="stSidebar"] * {
+    color: #e5e7eb !important;
 }
 
 /* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] {
-    background: #74c0fc;
-    color: black;
-    border-radius: 16px;
+    background: #1f2937;
+    border-radius: 14px;
+}
+.stChatMessage[data-testid="stChatMessage-user"] * {
+    color: #f9fafb !important;
 }
 
-/* ASSISTANT MESSAGE BOX */
+/* ASSISTANT MESSAGE */
 .stChatMessage[data-testid="stChatMessage-assistant"] {
-    background: white;
-    border-radius: 16px;
+    background: #111827;
+    border-radius: 14px;
+}
+.stChatMessage[data-testid="stChatMessage-assistant"] * {
+    color: #e5e7eb !important;
 }
 
-/* 🔥 FORCE TEXT COLOR (DESKTOP + MOBILE FIX) */
-.stChatMessage[data-testid="stChatMessage-assistant"] * {
-    color: #003366 !important;
+/* INPUT BOX */
+[data-testid="stChatInput"] textarea {
+    background: #0b0e14 !important;
+    color: #e5e7eb !important;
+    border-radius: 30px !important;
+    border: 1.5px solid #ef4444 !important;
 }
+
+/* SEND BUTTON */
+[data-testid="stChatInput"] button {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* BUTTONS */
+button {
+    background: #0b0e14 !important;
+    border: 1px solid #374151 !important;
+    color: #e5e7eb !important;
+}
+button:hover {
+    border-color: #ef4444 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -61,26 +94,35 @@ def get_user_context():
     try:
         res = requests.get("https://ipapi.co/json/").json()
         timezone = pytz.timezone(res.get("timezone", "UTC"))
-        return timezone
+        city = res.get("city", "")
+        country = res.get("country_name", "")
+        return timezone, city, country
     except:
-        return pytz.UTC
+        return pytz.UTC, "", ""
 
-tz = get_user_context()
+tz, user_city, user_country = get_user_context()
+
+# ---------------- GEO HELPERS ----------------
+def get_coordinates(place):
+    url = "https://nominatim.openstreetmap.org/search"
+    params = {"q": place, "format": "json"}
+    r = requests.get(url, params=params, headers={"User-Agent": "NeoMindAI"})
+    if r.json():
+        return float(r.json()[0]["lat"]), float(r.json()[0]["lon"])
+    return None
+
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    return round(2 * R * math.atan2(math.sqrt(a), math.sqrt(1-a)), 2)
 
 # ---------------- SMART LOCAL LOGIC ----------------
 def smart_answer(prompt):
     text = prompt.lower()
     now = datetime.now(tz)
-
-    if "time" in text:
-        return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
-
-    if "today" in text or text.strip() == "date":
-        return f"📅 **Today’s date:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
-
-    if "tomorrow" in text:
-        tmr = now + timedelta(days=1)
-        return f"📅 **Tomorrow’s date:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
 
     if "dasara" in text or "dussehra" in text:
         return (
@@ -90,11 +132,30 @@ def smart_answer(prompt):
             "This is when it is celebrated in most parts of India."
         )
 
+    if "tomorrow" in text:
+        tmr = now + timedelta(days=1)
+        return f"📅 **Tomorrow’s date:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
+
+    if "time" in text:
+        return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
+
+    if "today" in text or text.strip() == "date":
+        return f"📅 **Today’s date:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
+
+    if "day" in text:
+        return f"📆 **Today is:** {now.strftime('%A')}"
+
+    if "location" in text or "near me" in text:
+        if user_city:
+            return f"📍 **Your location:** {user_city}, {user_country}"
+
     return None
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
+    st.caption("Text-based AI Assistant")
+
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
@@ -104,8 +165,7 @@ with st.sidebar:
 
     st.divider()
     st.subheader("🆘 Help & Feedback")
-
-    feedback = st.text_area("Write your message here…")
+    feedback = st.text_area("Type your feedback here...")
 
     if st.button("Send Feedback"):
         if feedback.strip():
@@ -130,7 +190,7 @@ llm = ChatGroq(
 # ---------------- HERO ----------------
 st.markdown("""
 <div style="margin-top:30vh;text-align:center;">
-<h1>💬 NeoMind AI</h1>
+<h1>🧠 NeoMind AI</h1>
 <p>Ask. Think. Generate.</p>
 </div>
 """, unsafe_allow_html=True)
