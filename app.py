@@ -13,17 +13,17 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- FINAL DARK UI (FIXED) ----------------
+# ---------------- FINAL UI FIX ----------------
 st.markdown("""
 <style>
 
-/* REMOVE STREAMLIT HEADER & FOOTER WHITE AREAS */
+/* REMOVE TOP & BOTTOM WHITE BARS */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {
     background: transparent !important;
 }
 
-/* MAIN BACKGROUND (FIRST IMAGE STYLE) */
+/* MAIN BACKGROUND */
 .stApp {
     background: linear-gradient(135deg, #0b0e14, #1b1f2a);
     color: white;
@@ -37,12 +37,7 @@ st.markdown("""
     color: white !important;
 }
 
-/* APP TITLE + TAGLINE */
-h1, h2, h3, p {
-    color: white;
-}
-
-/* USER MESSAGE (DARK GREY) */
+/* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] {
     background: #6b7280;
     border-radius: 14px;
@@ -51,28 +46,41 @@ h1, h2, h3, p {
     color: white !important;
 }
 
-/* ASSISTANT MESSAGE (DARK + WHITE TEXT) */
+/* ASSISTANT MESSAGE */
 .stChatMessage[data-testid="stChatMessage-assistant"] {
     background: #111827;
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-assistant"] * {
     color: white !important;
-    font-weight: 500;
 }
 
-/* REMOVE CHAT INPUT WRAPPER BACKGROUND */
+/* -------- CHAT INPUT FIX (IMPORTANT PART) -------- */
+
+/* REMOVE WHITE BACKGROUND BEHIND CHATBOX */
 [data-testid="stChatInput"] {
+    background: transparent !important;
+    padding-bottom: 10px;
+}
+
+/* REMOVE INNER WHITE CONTAINER */
+[data-testid="stChatInput"] > div {
     background: transparent !important;
 }
 
-/* ONLY CHAT INPUT BOX IS WHITE */
+/* CHAT TEXTAREA (WHITE BOX) */
 [data-testid="stChatInput"] textarea {
     background: white !important;
     color: black !important;
-    border-radius: 30px !important;
+    border-radius: 28px !important;
     border: 2px solid #ef4444 !important;
-    padding: 14px !important;
+    padding: 14px 50px 14px 16px !important;
+}
+
+/* REMOVE DOUBLE RED BORDER */
+[data-testid="stChatInput"] textarea:focus {
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 /* PLACEHOLDER */
@@ -80,10 +88,18 @@ h1, h2, h3, p {
     color: #6b7280 !important;
 }
 
-/* SEND BUTTON */
+/* SEND BUTTON – BLACK & VISIBLE */
 [data-testid="stChatInput"] button {
-    background: transparent !important;
-    border: none !important;
+    background: black !important;
+    border-radius: 50% !important;
+    width: 38px !important;
+    height: 38px !important;
+    margin-right: 8px !important;
+}
+
+/* ARROW ICON */
+[data-testid="stChatInput"] button svg {
+    fill: white !important;
 }
 
 /* GENERAL BUTTONS */
@@ -113,20 +129,10 @@ def get_timezone():
 
 tz = get_timezone()
 
-# ---------------- SMART LOGIC (UNCHANGED) ----------------
+# ---------------- SMART ANSWERS (UNCHANGED) ----------------
 def smart_answer(prompt):
     text = prompt.lower()
     now = datetime.now(tz)
-
-    if "dasara" in text or "dussehra" in text:
-        return (
-            "Next year’s **Dasara (Dussehra)** date is based on the **Hindu lunar calendar**.\n\n"
-            "📅 **Saturday, 24 October 2026**"
-        )
-
-    if "tomorrow" in text:
-        tmr = now + timedelta(days=1)
-        return f"📅 **Tomorrow’s date:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
 
     if "time" in text:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
@@ -134,8 +140,9 @@ def smart_answer(prompt):
     if "today" in text or text.strip() == "date":
         return f"📅 **Today’s date:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
-    if "day" in text:
-        return f"📆 **Today is:** {now.strftime('%A')}"
+    if "tomorrow" in text:
+        tmr = now + timedelta(days=1)
+        return f"📅 **Tomorrow’s date:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
 
     return None
 
@@ -149,19 +156,6 @@ with st.sidebar:
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.rerun()
-
-    st.divider()
-    st.subheader("🆘 Help & Feedback")
-    feedback = st.text_area("Type your feedback here...")
-
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={"message": feedback},
-                headers={"Accept": "application/json"}
-            )
-            st.success("✅ Feedback sent!")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
