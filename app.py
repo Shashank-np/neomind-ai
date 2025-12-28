@@ -1,6 +1,5 @@
 import streamlit as st
 import requests
-import math
 from datetime import datetime, timedelta
 import pytz
 
@@ -8,70 +7,77 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 
 # ---------------- PAGE CONFIG ----------------
-st.set_page_config(page_title="NeoMind AI", page_icon="🧠", layout="wide")
+st.set_page_config(
+    page_title="NeoMind AI",
+    page_icon="🧠",
+    layout="wide"
+)
 
-# ---------------- DARK UI (FINAL FIX) ----------------
+# ---------------- FINAL DARK UI (FIXED) ----------------
 st.markdown("""
 <style>
 
-/* REMOVE STREAMLIT TOP BAR */
-[data-testid="stHeader"] {
-    background: transparent;
+/* REMOVE STREAMLIT HEADER & FOOTER WHITE AREAS */
+[data-testid="stHeader"],
+[data-testid="stBottom"] {
+    background: transparent !important;
 }
 
-/* MAIN APP BACKGROUND */
+/* MAIN BACKGROUND (FIRST IMAGE STYLE) */
 .stApp {
-    background: radial-gradient(circle at center, #1b1f2a, #0b0e14);
+    background: linear-gradient(135deg, #0b0e14, #1b1f2a);
     color: white;
 }
 
 /* SIDEBAR */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #151923, #0b0e14);
+    background: linear-gradient(180deg, #0b0e14, #151923);
 }
 [data-testid="stSidebar"] * {
-    color: #e5e7eb !important;
+    color: white !important;
 }
 
-/* USER MESSAGE */
+/* APP TITLE + TAGLINE */
+h1, h2, h3, p {
+    color: white;
+}
+
+/* USER MESSAGE (DARK GREY) */
 .stChatMessage[data-testid="stChatMessage-user"] {
     background: #6b7280;
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-user"] * {
-    color: #ffffff !important;
+    color: white !important;
 }
 
-/* ASSISTANT MESSAGE (WHITE TEXT) */
+/* ASSISTANT MESSAGE (DARK + WHITE TEXT) */
 .stChatMessage[data-testid="stChatMessage-assistant"] {
     background: #111827;
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-assistant"] * {
-    color: #ffffff !important;
+    color: white !important;
     font-weight: 500;
 }
 
-/* REMOVE BOTTOM WHITE STRIP */
-[data-testid="stBottom"] {
-    background: transparent !important;
-}
+/* REMOVE CHAT INPUT WRAPPER BACKGROUND */
 [data-testid="stChatInput"] {
     background: transparent !important;
 }
 
-/* INPUT BOX */
+/* ONLY CHAT INPUT BOX IS WHITE */
 [data-testid="stChatInput"] textarea {
-    background: #0b0e14 !important;
-    color: #ffffff !important;
+    background: white !important;
+    color: black !important;
     border-radius: 30px !important;
     border: 2px solid #ef4444 !important;
     padding: 14px !important;
 }
 
-/* PLACEHOLDER COLOR */
+/* PLACEHOLDER */
 [data-testid="stChatInput"] textarea::placeholder {
-    color: #9ca3af !important;
+    color: #6b7280 !important;
 }
 
 /* SEND BUTTON */
@@ -80,9 +86,9 @@ st.markdown("""
     border: none !important;
 }
 
-/* ALL BUTTONS */
+/* GENERAL BUTTONS */
 button {
-    background: #0b0e14 !important;
+    background: transparent !important;
     border: 1px solid #374151 !important;
     color: white !important;
 }
@@ -97,25 +103,24 @@ button:hover {
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ---------------- USER LOCATION & TIMEZONE ----------------
-def get_user_context():
+# ---------------- USER TIMEZONE ----------------
+def get_timezone():
     try:
         res = requests.get("https://ipapi.co/json/").json()
         return pytz.timezone(res.get("timezone", "UTC"))
     except:
         return pytz.UTC
 
-tz = get_user_context()
+tz = get_timezone()
 
-# ---------------- SMART ANSWERS (UNCHANGED) ----------------
+# ---------------- SMART LOGIC (UNCHANGED) ----------------
 def smart_answer(prompt):
     text = prompt.lower()
     now = datetime.now(tz)
 
     if "dasara" in text or "dussehra" in text:
         return (
-            "Next year’s **Dasara (Dussehra)** date is based on the **Hindu lunar calendar**, "
-            "and does **not fall on the same Gregorian date each year**.\n\n"
+            "Next year’s **Dasara (Dussehra)** date is based on the **Hindu lunar calendar**.\n\n"
             "📅 **Saturday, 24 October 2026**"
         )
 
@@ -139,7 +144,7 @@ with st.sidebar:
     st.title("🧠 NeoMind AI")
     st.caption("Text-based AI Assistant")
 
-    temperature = st.slider("Creativity", 0.0, 1.0, 0.5)  # ✅ DEFAULT FIXED
+    temperature = st.slider("Creativity", 0.0, 1.0, 0.5)
 
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
