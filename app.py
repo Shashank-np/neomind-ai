@@ -9,7 +9,7 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 
 # ---------------- PAGE CONFIG ----------------
-st.set_page_config(page_title="NeoMind AI", page_icon="🌙", layout="wide")
+st.set_page_config(page_title="NeoMind AI", page_icon="✨", layout="wide")
 
 # ---------------- NIGHT SKY + STARS ----------------
 stars = "".join(
@@ -19,12 +19,19 @@ stars = "".join(
 
 st.markdown(f"""
 <style>
+/* REMOVE TOP WHITE BAR */
+[data-testid="stHeader"] {{
+    background: transparent;
+}}
+
+/* MAIN BACKGROUND */
 .stApp {{
     background: linear-gradient(180deg, #050b2e, #020617);
-    color: white;
+    color: #e5e7eb;
     overflow: hidden;
 }}
 
+/* STARS */
 .star {{
     position: fixed;
     width: 2px;
@@ -41,13 +48,20 @@ st.markdown(f"""
     100% {{ opacity: 0.2; }}
 }}
 
+/* SIDEBAR */
 [data-testid="stSidebar"] {{
-    background: #020617;
+    background: linear-gradient(180deg, #020617, #050b2e);
+    color: #e5e7eb;
 }}
 
+[data-testid="stSidebar"] * {{
+    color: #e5e7eb !important;
+}}
+
+/* CHAT MESSAGES */
 .stChatMessage[data-testid="stChatMessage-user"] {{
     background: #1e293b;
-    color: white;
+    color: #f8fafc;
     border-radius: 14px;
 }}
 
@@ -55,6 +69,29 @@ st.markdown(f"""
     background: #020617;
     color: #e5e7eb;
     border-radius: 14px;
+}}
+
+/* INPUT BOX (REMOVE WHITE BACKGROUND) */
+[data-testid="stChatInput"] {{
+    background: transparent;
+}}
+
+[data-testid="stChatInput"] textarea {{
+    background: #020617 !important;
+    color: #e5e7eb !important;
+    border-radius: 25px !important;
+    border: 1px solid #334155 !important;
+}}
+
+/* BUTTONS */
+button {{
+    background-color: #020617 !important;
+    color: #e5e7eb !important;
+    border: 1px solid #334155 !important;
+}}
+
+button:hover {{
+    background-color: #020617 !important;
 }}
 </style>
 {stars}
@@ -103,10 +140,10 @@ def date_time_answer(prompt):
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
-    st.title("🌙 NeoMind AI")
+    st.title("NeoMind AI")
     temperature = st.slider("Creativity", 0.0, 1.0, 0.5)
 
-    if st.button("🧹 Clear Chat"):
+    if st.button("Clear Chat"):
         st.session_state.messages = []
         st.rerun()
 
@@ -123,7 +160,7 @@ llm = ChatGroq(
 # ---------------- HERO ----------------
 st.markdown("""
 <div style="margin-top:30vh;text-align:center;">
-<h1>🌌 NeoMind AI</h1>
+<h1>NeoMind AI</h1>
 <p>Ask. Think. Generate.</p>
 </div>
 """, unsafe_allow_html=True)
