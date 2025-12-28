@@ -13,11 +13,11 @@ api_key = st.secrets["GROQ_API_KEY"]
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="NeoMind AI", page_icon="🧠", layout="wide")
 
-# ---------------- DARK AI BACKGROUND THEME ----------------
+# ---------------- DARK THEME FIX ----------------
 st.markdown("""
 <style>
 
-/* REMOVE TOP WHITE BAR */
+/* REMOVE TOP BAR */
 [data-testid="stHeader"] {
     background: transparent;
 }
@@ -25,13 +25,12 @@ st.markdown("""
 /* MAIN BACKGROUND */
 .stApp {
     background: radial-gradient(circle at center, #1b1f2a, #0b0e14);
-    color: #e5e7eb;
+    color: white;
 }
 
 /* SIDEBAR */
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #151923, #0b0e14);
-    color: #e5e7eb;
 }
 [data-testid="stSidebar"] * {
     color: #e5e7eb !important;
@@ -39,26 +38,32 @@ st.markdown("""
 
 /* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] {
-    background: #1f2937;
+    background: #374151;
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-user"] * {
-    color: #f9fafb !important;
+    color: white !important;
 }
 
-/* ASSISTANT MESSAGE */
+/* ASSISTANT MESSAGE (WHITE BOX + WHITE TEXT) */
 .stChatMessage[data-testid="stChatMessage-assistant"] {
-    background: #111827;
+    background: white;
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-assistant"] * {
-    color: #e5e7eb !important;
+    color: #000000 !important;
+    font-weight: 500;
 }
 
-/* INPUT BOX */
+/* CHAT INPUT AREA BACKGROUND */
+[data-testid="stChatInput"] {
+    background: radial-gradient(circle at center, #1b1f2a, #0b0e14);
+}
+
+/* CHAT INPUT BOX (WHITE) */
 [data-testid="stChatInput"] textarea {
-    background: #0b0e14 !important;
-    color: #e5e7eb !important;
+    background: white !important;
+    color: black !important;
     border-radius: 30px !important;
     border: 1.5px solid #ef4444 !important;
 }
@@ -73,7 +78,7 @@ st.markdown("""
 button {
     background: #0b0e14 !important;
     border: 1px solid #374151 !important;
-    color: #e5e7eb !important;
+    color: white !important;
 }
 button:hover {
     border-color: #ef4444 !important;
@@ -86,40 +91,18 @@ button:hover {
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "last_place" not in st.session_state:
-    st.session_state.last_place = None
-
 # ---------------- USER LOCATION & TIMEZONE ----------------
 def get_user_context():
     try:
         res = requests.get("https://ipapi.co/json/").json()
         timezone = pytz.timezone(res.get("timezone", "UTC"))
-        city = res.get("city", "")
-        country = res.get("country_name", "")
-        return timezone, city, country
+        return timezone
     except:
-        return pytz.UTC, "", ""
+        return pytz.UTC
 
-tz, user_city, user_country = get_user_context()
+tz = get_user_context()
 
-# ---------------- GEO HELPERS ----------------
-def get_coordinates(place):
-    url = "https://nominatim.openstreetmap.org/search"
-    params = {"q": place, "format": "json"}
-    r = requests.get(url, params=params, headers={"User-Agent": "NeoMindAI"})
-    if r.json():
-        return float(r.json()[0]["lat"]), float(r.json()[0]["lon"])
-    return None
-
-def haversine(lat1, lon1, lat2, lon2):
-    R = 6371
-    phi1, phi2 = math.radians(lat1), math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlambda = math.radians(lon2 - lon1)
-    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
-    return round(2 * R * math.atan2(math.sqrt(a), math.sqrt(1-a)), 2)
-
-# ---------------- SMART LOCAL LOGIC ----------------
+# ---------------- SMART LOGIC (UNCHANGED) ----------------
 def smart_answer(prompt):
     text = prompt.lower()
     now = datetime.now(tz)
@@ -128,8 +111,7 @@ def smart_answer(prompt):
         return (
             "Next year’s **Dasara (Dussehra)** date is based on the **Hindu lunar calendar**, "
             "and does **not fall on the same Gregorian date each year**.\n\n"
-            "📅 **Saturday, 24 October 2026**\n\n"
-            "This is when it is celebrated in most parts of India."
+            "📅 **Saturday, 24 October 2026**"
         )
 
     if "tomorrow" in text:
@@ -145,10 +127,6 @@ def smart_answer(prompt):
     if "day" in text:
         return f"📆 **Today is:** {now.strftime('%A')}"
 
-    if "location" in text or "near me" in text:
-        if user_city:
-            return f"📍 **Your location:** {user_city}, {user_country}"
-
     return None
 
 # ---------------- SIDEBAR ----------------
@@ -160,7 +138,6 @@ with st.sidebar:
 
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
-        st.session_state.last_place = None
         st.rerun()
 
     st.divider()
@@ -179,12 +156,11 @@ with st.sidebar:
     st.divider()
     st.caption("Created by **Shashank N P**")
 
-# ---------------- FREE LLM ----------------
+# ---------------- LLM ----------------
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
     api_key=api_key,
     temperature=temperature,
-    streaming=False
 )
 
 # ---------------- HERO ----------------
