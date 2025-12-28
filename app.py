@@ -13,11 +13,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- FINAL DARK UI (CHATBOX FIXED) ----------------
+# ---------------- FINAL DARK UI (ABSOLUTELY FIXED) ----------------
 st.markdown("""
 <style>
 
-/* REMOVE STREAMLIT HEADER & FOOTER WHITE AREAS */
+/* REMOVE STREAMLIT DEFAULT WHITE AREAS */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {
     background: transparent !important;
@@ -46,35 +46,33 @@ st.markdown("""
     color: white !important;
 }
 
-/* ASSISTANT MESSAGE */
+/* ASSISTANT MESSAGE – PURE WHITE TEXT */
 .stChatMessage[data-testid="stChatMessage-assistant"] {
     background: #111827;
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-assistant"] * {
-    color: white !important;
+    color: #ffffff !important;
     font-weight: 500;
 }
 
-/* ---------------- CHAT INPUT FIX ---------------- */
-
-/* REMOVE WHITE BACKGROUND BEHIND CHAT INPUT */
+/* REMOVE CHAT INPUT BACKGROUND */
 [data-testid="stChatInput"],
 [data-testid="stChatInput"] > div {
     background: transparent !important;
 }
 
-/* CHAT INPUT BOX (ONLY THIS IS WHITE) */
+/* CHAT INPUT – SINGLE BLACK BORDER */
 [data-testid="stChatInput"] textarea {
     background: white !important;
     color: black !important;
-    border-radius: 28px !important;
-    border: 2px solid #ef4444 !important;
-    padding: 14px 52px 14px 18px !important;
+    border-radius: 26px !important;
+    border: 2px solid black !important;
+    padding: 14px 48px 14px 18px !important;
     box-shadow: none !important;
 }
 
-/* REMOVE DOUBLE BORDER */
+/* REMOVE INNER FRAME */
 [data-testid="stChatInput"] textarea:focus {
     outline: none !important;
     box-shadow: none !important;
@@ -85,19 +83,20 @@ st.markdown("""
     color: #6b7280 !important;
 }
 
-/* SEND BUTTON – BLACK */
+/* SEND BUTTON – NO CIRCLE */
 [data-testid="stChatInput"] button {
-    background: black !important;
-    border-radius: 50% !important;
-    width: 38px !important;
-    height: 38px !important;
-    margin-right: 8px !important;
+    background: transparent !important;
     border: none !important;
+    width: auto !important;
+    height: auto !important;
+    margin-right: 10px !important;
 }
 
-/* SEND ARROW – WHITE */
+/* SEND ARROW – BLACK ONLY */
 [data-testid="stChatInput"] button svg {
-    fill: white !important;
+    fill: black !important;
+    width: 22px !important;
+    height: 22px !important;
 }
 
 /* GENERAL BUTTONS */
@@ -107,7 +106,7 @@ button {
     color: white !important;
 }
 button:hover {
-    border-color: #ef4444 !important;
+    border-color: white !important;
 }
 
 </style>
