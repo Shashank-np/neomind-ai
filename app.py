@@ -5,7 +5,7 @@ from datetime import datetime
 import pytz
 
 from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
 # ---------------- API KEY ----------------
 api_key = st.secrets["GROQ_API_KEY"]
@@ -18,12 +18,6 @@ st.markdown("""
 <style>
 .stApp {
     background: linear-gradient(180deg, #e6f7ff, #cceeff);
-    animation: bgMove 12s ease infinite;
-}
-@keyframes bgMove {
-    0% {background-position: 0% 50%;}
-    50% {background-position: 100% 50%;}
-    100% {background-position: 0% 50%;}
 }
 [data-testid="stSidebar"] {
     background: #d9f0ff;
@@ -48,22 +42,8 @@ if "messages" not in st.session_state:
 if "last_place" not in st.session_state:
     st.session_state.last_place = None
 
-# ---------------- CURRENT DATE & TIME (IST) ----------------
+# ---------------- TIMEZONE ----------------
 ist = pytz.timezone("Asia/Kolkata")
-now = datetime.now(ist)
-
-current_datetime_context = f"""
-Today's date is {now.strftime('%d-%m-%Y')}.
-Current time is {now.strftime('%I:%M %p')} IST.
-You have access to this current date and time.
-"""
-
-if "system_time_added" not in st.session_state:
-    st.session_state.messages.insert(
-        0,
-        SystemMessage(content=current_datetime_context)
-    )
-    st.session_state.system_time_added = True
 
 # ---------------- GEO HELPERS ----------------
 def get_coordinates(place):
@@ -85,6 +65,14 @@ def haversine(lat1, lon1, lat2, lon2):
 # ---------------- SMART LOCAL LOGIC ----------------
 def smart_answer(prompt):
     text = prompt.lower()
+    now = datetime.now(ist)
+
+    # ✅ DATE / TIME OVERRIDE (THIS FIXES YOUR ISSUE)
+    if "time" in text:
+        return f"⏰ Current time is **{now.strftime('%I:%M %p')} IST**."
+
+    if "date" in text or "today" in text:
+        return f"📅 Today's date is **{now.strftime('%d-%m-%Y')}**."
 
     bars_dvg = {
         "Lion’s Bar": "Lion’s Bar Davanagere",
@@ -106,8 +94,6 @@ def smart_answer(prompt):
         if bus and bar:
             dist = haversine(bus[0], bus[1], bar[0], bar[1])
             return f"📍 **{st.session_state.last_place}** is approximately **{dist} km** from Davanagere Bus Stand."
-        else:
-            return "Sorry, I couldn’t fetch live map data."
 
     return None
 
@@ -119,31 +105,21 @@ with st.sidebar:
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.last_place = None
-        st.session_state.system_time_added = False
         st.rerun()
 
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
-    feedback = st.text_area(
-        "Write your message here…",
-        placeholder="Share your feedback or suggestions"
-    )
+    feedback = st.text_area("Write your message here…")
 
     if st.button("Send Feedback"):
         if feedback.strip():
             requests.post(
                 "https://formspree.io/f/xblanbjk",
-                data={
-                    "name": "NeoMind AI User",
-                    "email": "no-reply@neomind.ai",
-                    "message": feedback
-                },
+                data={"message": feedback},
                 headers={"Accept": "application/json"}
             )
-            st.success("✅ Feedback sent successfully!")
-        else:
-            st.warning("Please write something before sending.")
+            st.success("✅ Feedback sent!")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -188,4 +164,3 @@ if prompt:
 
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
-
