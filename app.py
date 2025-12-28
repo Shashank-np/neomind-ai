@@ -13,11 +13,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- LIGHT SKY-BLUE UI ----------------
+# ---------------- FIXED SKY-BLUE UI (MOBILE + DESKTOP SAFE) ----------------
 st.markdown("""
 <style>
 
-/* REMOVE DEFAULT HEADER / FOOTER */
+/* REMOVE STREAMLIT HEADER / FOOTER */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {
     background: transparent !important;
@@ -26,14 +26,7 @@ st.markdown("""
 /* MAIN BACKGROUND */
 .stApp {
     background: linear-gradient(180deg, #e6f7ff, #cceeff);
-    animation: bgMove 12s ease infinite;
-    color: #003366;
-}
-
-@keyframes bgMove {
-    0% {background-position: 0% 50%;}
-    50% {background-position: 100% 50%;}
-    100% {background-position: 0% 50%;}
+    color: #003366 !important;
 }
 
 /* SIDEBAR */
@@ -46,43 +39,49 @@ st.markdown("""
 
 /* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] {
-    background: #bde3ff;
+    background: #bde3ff !important;
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-user"] * {
     color: #003366 !important;
 }
 
-/* ASSISTANT MESSAGE */
+/* ✅ ASSISTANT MESSAGE – FORCE COLOR FOR MOBILE */
 .stChatMessage[data-testid="stChatMessage-assistant"] {
-    background: #ffffff;
+    background: #ffffff !important;
     border-radius: 14px;
 }
-.stChatMessage[data-testid="stChatMessage-assistant"] * {
+
+/* 🔥 CRITICAL FIX — FORCE TEXT COLOR DEEPLY */
+.stChatMessage[data-testid="stChatMessage-assistant"] *,
+.stChatMessage[data-testid="stChatMessage-assistant"] p,
+.stChatMessage[data-testid="stChatMessage-assistant"] span,
+.stChatMessage[data-testid="stChatMessage-assistant"] li,
+.stChatMessage[data-testid="stChatMessage-assistant"] strong,
+.stChatMessage[data-testid="stChatMessage-assistant"] em,
+.stChatMessage[data-testid="stChatMessage-assistant"] code {
     color: #003366 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
-/* CHAT INPUT WRAPPER – REMOVE EXTRA WHITE STRIP */
+/* CHAT INPUT WRAPPER */
 [data-testid="stChatInput"] {
     background: transparent !important;
-    padding: 0 !important;
 }
 
-/* ===== FIXED INPUT BOX (MATCH FIRST IMAGE) ===== */
+/* INPUT BOX */
 [data-testid="stChatInput"] textarea {
     background: #ffffff !important;
     color: #003366 !important;
-
-    border-radius: 999px !important;          /* pill shape */
-    border: 1.5px solid #aaccee !important;   /* single clean border */
+    border-radius: 999px !important;
+    border: 1.5px solid #aaccee !important;
+    padding: 14px 56px 14px 20px !important;
     box-shadow: none !important;
     outline: none !important;
-
-    padding: 14px 56px 14px 20px !important;  /* space for arrow */
-    min-height: 48px !important;
 }
 
-/* REMOVE INNER / DOUBLE BORDER */
+/* REMOVE DOUBLE BORDER */
 [data-testid="stChatInput"] textarea:focus {
     outline: none !important;
     box-shadow: none !important;
@@ -93,15 +92,13 @@ st.markdown("""
     color: #7aa7c7 !important;
 }
 
-/* SEND BUTTON – CLEAN ARROW ONLY */
+/* SEND BUTTON */
 [data-testid="stChatInput"] button {
     background: transparent !important;
     border: none !important;
-    box-shadow: none !important;
-    padding: 0 16px !important;
 }
 
-/* SEND ARROW ICON */
+/* SEND ARROW */
 [data-testid="stChatInput"] button svg {
     fill: #7aa7c7 !important;
     width: 22px !important;
