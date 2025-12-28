@@ -62,18 +62,29 @@ st.markdown("""
     color: #003366 !important;
 }
 
-/* CHAT INPUT WRAPPER */
+/* CHAT INPUT WRAPPER – REMOVE EXTRA WHITE STRIP */
 [data-testid="stChatInput"] {
     background: transparent !important;
+    padding: 0 !important;
 }
 
-/* INPUT BOX */
+/* ===== FIXED INPUT BOX (MATCH FIRST IMAGE) ===== */
 [data-testid="stChatInput"] textarea {
-    background: white !important;
+    background: #ffffff !important;
     color: #003366 !important;
-    border-radius: 24px !important;
-    border: 1.5px solid #aaccee !important;
-    padding: 14px 50px 14px 18px !important;
+
+    border-radius: 999px !important;          /* pill shape */
+    border: 1.5px solid #aaccee !important;   /* single clean border */
+    box-shadow: none !important;
+    outline: none !important;
+
+    padding: 14px 56px 14px 20px !important;  /* space for arrow */
+    min-height: 48px !important;
+}
+
+/* REMOVE INNER / DOUBLE BORDER */
+[data-testid="stChatInput"] textarea:focus {
+    outline: none !important;
     box-shadow: none !important;
 }
 
@@ -82,13 +93,15 @@ st.markdown("""
     color: #7aa7c7 !important;
 }
 
-/* SEND BUTTON */
+/* SEND BUTTON – CLEAN ARROW ONLY */
 [data-testid="stChatInput"] button {
     background: transparent !important;
     border: none !important;
+    box-shadow: none !important;
+    padding: 0 16px !important;
 }
 
-/* SEND ARROW */
+/* SEND ARROW ICON */
 [data-testid="stChatInput"] button svg {
     fill: #7aa7c7 !important;
     width: 22px !important;
