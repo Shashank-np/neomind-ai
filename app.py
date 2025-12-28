@@ -1,6 +1,9 @@
 import streamlit as st
 import requests
 import math
+from datetime import datetime
+import pytz
+
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
@@ -44,6 +47,23 @@ if "messages" not in st.session_state:
 
 if "last_place" not in st.session_state:
     st.session_state.last_place = None
+
+# ---------------- CURRENT DATE & TIME (IST) ----------------
+ist = pytz.timezone("Asia/Kolkata")
+now = datetime.now(ist)
+
+current_datetime_context = f"""
+Today's date is {now.strftime('%d-%m-%Y')}.
+Current time is {now.strftime('%I:%M %p')} IST.
+You have access to this current date and time.
+"""
+
+if "system_time_added" not in st.session_state:
+    st.session_state.messages.insert(
+        0,
+        SystemMessage(content=current_datetime_context)
+    )
+    st.session_state.system_time_added = True
 
 # ---------------- GEO HELPERS ----------------
 def get_coordinates(place):
@@ -99,6 +119,7 @@ with st.sidebar:
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.last_place = None
+        st.session_state.system_time_added = False
         st.rerun()
 
     st.divider()
@@ -112,7 +133,7 @@ with st.sidebar:
     if st.button("Send Feedback"):
         if feedback.strip():
             requests.post(
-                "https://formspree.io/f/xblanbjk",   # ✅ same backend as old code
+                "https://formspree.io/f/xblanbjk",
                 data={
                     "name": "NeoMind AI User",
                     "email": "no-reply@neomind.ai",
@@ -129,7 +150,7 @@ with st.sidebar:
 
 # ---------------- FREE LLM ----------------
 llm = ChatGroq(
-    model="llama-3.1-8b-instant",   # FREE & FAST
+    model="llama-3.1-8b-instant",
     api_key=api_key,
     temperature=temperature,
     streaming=False
