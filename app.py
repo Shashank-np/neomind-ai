@@ -13,11 +13,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- FINAL SKY-BLUE UI (DESKTOP + MOBILE FIXED) ----------------
+# ---------------- FINAL SKY-BLUE UI (BUG-FREE) ----------------
 st.markdown("""
 <style>
 
-/* REMOVE STREAMLIT TOP/BOTTOM BARS */
+/* REMOVE STREAMLIT TOP/BOTTOM */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {
     background: transparent !important;
@@ -46,7 +46,7 @@ st.markdown("""
     color: #003366 !important;
 }
 
-/* ASSISTANT MESSAGE (FORCE READABLE ON MOBILE) */
+/* ASSISTANT MESSAGE */
 .stChatMessage[data-testid="stChatMessage-assistant"] {
     background: #ffffff !important;
     border-radius: 14px;
@@ -56,37 +56,33 @@ st.markdown("""
     opacity: 1 !important;
 }
 
-/* ===== CHAT INPUT FIX (IMPORTANT PART) ===== */
+/* ========== CHAT INPUT (FINAL FIX) ========== */
 
-/* REMOVE MOBILE OUTER WRAPPER */
+/* OUTER WRAPPER */
 [data-testid="stChatInput"] {
     background: transparent !important;
-    padding: 0 !important;
     border: none !important;
+    padding: 0 !important;
+    position: relative !important;
 }
 
-/* REMOVE EXTRA MOBILE FRAME */
+/* REMOVE MOBILE INNER FRAME */
 [data-testid="stChatInput"] > div {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
 }
 
-/* REAL INPUT BOX (MATCH SECOND IMAGE) */
+/* TEXTAREA */
 [data-testid="stChatInput"] textarea {
+    width: 100% !important;
     background: #ffffff !important;
     color: #003366 !important;
     border-radius: 999px !important;
     border: 1.5px solid #aaccee !important;
-    padding: 14px 52px 14px 20px !important;
+    padding: 14px 60px 14px 20px !important;
     box-shadow: none !important;
     outline: none !important;
-}
-
-/* REMOVE DOUBLE BORDER ON FOCUS */
-[data-testid="stChatInput"] textarea:focus {
-    outline: none !important;
-    box-shadow: none !important;
 }
 
 /* PLACEHOLDER */
@@ -94,14 +90,18 @@ st.markdown("""
     color: #7aa7c7 !important;
 }
 
-/* SEND BUTTON (NO BACKGROUND CIRCLE) */
+/* SEND BUTTON — FIXED POSITION */
 [data-testid="stChatInput"] button {
+    position: absolute !important;
+    right: 18px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
     background: transparent !important;
     border: none !important;
     padding: 0 !important;
 }
 
-/* SEND ARROW */
+/* SEND ICON */
 [data-testid="stChatInput"] button svg {
     fill: #7aa7c7 !important;
     width: 22px !important;
