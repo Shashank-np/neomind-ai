@@ -7,22 +7,19 @@ import pytz
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 
-# ---------------- API KEY ----------------
-api_key = st.secrets["GROQ_API_KEY"]
-
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="NeoMind AI", page_icon="🧠", layout="wide")
 
-# ---------------- DARK THEME FIX ----------------
+# ---------------- DARK UI (FINAL FIX) ----------------
 st.markdown("""
 <style>
 
-/* REMOVE TOP BAR */
+/* REMOVE STREAMLIT TOP BAR */
 [data-testid="stHeader"] {
     background: transparent;
 }
 
-/* MAIN BACKGROUND */
+/* MAIN APP BACKGROUND */
 .stApp {
     background: radial-gradient(circle at center, #1b1f2a, #0b0e14);
     color: white;
@@ -38,34 +35,43 @@ st.markdown("""
 
 /* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] {
-    background: #374151;
+    background: #6b7280;
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-user"] * {
-    color: white !important;
+    color: #ffffff !important;
 }
 
-/* ASSISTANT MESSAGE (WHITE BOX + WHITE TEXT) */
+/* ASSISTANT MESSAGE (WHITE TEXT) */
 .stChatMessage[data-testid="stChatMessage-assistant"] {
-    background: white;
+    background: #111827;
     border-radius: 14px;
 }
 .stChatMessage[data-testid="stChatMessage-assistant"] * {
-    color: #000000 !important;
+    color: #ffffff !important;
     font-weight: 500;
 }
 
-/* CHAT INPUT AREA BACKGROUND */
+/* REMOVE BOTTOM WHITE STRIP */
+[data-testid="stBottom"] {
+    background: transparent !important;
+}
 [data-testid="stChatInput"] {
-    background: radial-gradient(circle at center, #1b1f2a, #0b0e14);
+    background: transparent !important;
 }
 
-/* CHAT INPUT BOX (WHITE) */
+/* INPUT BOX */
 [data-testid="stChatInput"] textarea {
-    background: white !important;
-    color: black !important;
+    background: #0b0e14 !important;
+    color: #ffffff !important;
     border-radius: 30px !important;
-    border: 1.5px solid #ef4444 !important;
+    border: 2px solid #ef4444 !important;
+    padding: 14px !important;
+}
+
+/* PLACEHOLDER COLOR */
+[data-testid="stChatInput"] textarea::placeholder {
+    color: #9ca3af !important;
 }
 
 /* SEND BUTTON */
@@ -74,7 +80,7 @@ st.markdown("""
     border: none !important;
 }
 
-/* BUTTONS */
+/* ALL BUTTONS */
 button {
     background: #0b0e14 !important;
     border: 1px solid #374151 !important;
@@ -95,14 +101,13 @@ if "messages" not in st.session_state:
 def get_user_context():
     try:
         res = requests.get("https://ipapi.co/json/").json()
-        timezone = pytz.timezone(res.get("timezone", "UTC"))
-        return timezone
+        return pytz.timezone(res.get("timezone", "UTC"))
     except:
         return pytz.UTC
 
 tz = get_user_context()
 
-# ---------------- SMART LOGIC (UNCHANGED) ----------------
+# ---------------- SMART ANSWERS (UNCHANGED) ----------------
 def smart_answer(prompt):
     text = prompt.lower()
     now = datetime.now(tz)
@@ -134,7 +139,7 @@ with st.sidebar:
     st.title("🧠 NeoMind AI")
     st.caption("Text-based AI Assistant")
 
-    temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
+    temperature = st.slider("Creativity", 0.0, 1.0, 0.5)  # ✅ DEFAULT FIXED
 
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
@@ -159,7 +164,7 @@ with st.sidebar:
 # ---------------- LLM ----------------
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
-    api_key=api_key,
+    api_key=st.secrets["GROQ_API_KEY"],
     temperature=temperature,
 )
 
