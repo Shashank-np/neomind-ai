@@ -41,20 +41,16 @@ else:
 # ---------------- FINAL UI ----------------
 st.markdown(f"""
 <style>
-
-/* REMOVE STREAMLIT TOP/BOTTOM */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {{
     background: transparent !important;
 }}
 
-/* MAIN BACKGROUND */
 .stApp {{
     background: {BG_MAIN};
     color: {TEXT_COLOR} !important;
 }}
 
-/* SIDEBAR */
 [data-testid="stSidebar"] {{
     background: {BG_SIDEBAR};
 }}
@@ -62,7 +58,6 @@ st.markdown(f"""
     color: {TEXT_COLOR} !important;
 }}
 
-/* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] {{
     background: {BG_CARD};
     border-radius: 14px;
@@ -71,22 +66,20 @@ st.markdown(f"""
     color: {TEXT_COLOR} !important;
 }}
 
-/* ASSISTANT MESSAGE — FINAL CORRECT FIX */
 .stChatMessage[data-testid="stChatMessage-assistant"] {{
     background: {BG_CARD};
     border-radius: 14px;
 }}
 
-/* ✅ GENERATED TEXT = WHITE */
 .stChatMessage[data-testid="stChatMessage-assistant"] p,
 .stChatMessage[data-testid="stChatMessage-assistant"] span,
 .stChatMessage[data-testid="stChatMessage-assistant"] li,
 .stChatMessage[data-testid="stChatMessage-assistant"] strong,
-.stChatMessage[data-testid="stChatMessage-assistant"] em {{
+.stChatMessage[data-testid="stChatMessage-assistant"] em,
+.stChatMessage[data-testid="stChatMessage-assistant"] div {{
     color: #ffffff !important;
 }}
 
-/* ✅ CODE BLOCKS = KEEP AS-IS (LIKE IMAGE 2) */
 .stChatMessage[data-testid="stChatMessage-assistant"] pre {{
     background: #ffffff !important;
     color: #000000 !important;
@@ -95,10 +88,8 @@ st.markdown(f"""
 
 .stChatMessage[data-testid="stChatMessage-assistant"] code {{
     color: #000000 !important;
-    background: transparent !important;
 }}
 
-/* CHAT INPUT */
 [data-testid="stChatInput"] textarea {{
     background: {BG_CARD};
     color: {TEXT_COLOR};
@@ -107,10 +98,8 @@ st.markdown(f"""
     padding: 14px 64px 14px 20px;
 }}
 
-/* PLACEHOLDER */
 [data-testid="stChatInput"] textarea::placeholder {{
     color: {PLACEHOLDER} !important;
-    opacity: 1 !important;
 }}
 
 [data-testid="stChatInput"] button {{
@@ -123,30 +112,23 @@ st.markdown(f"""
     border-radius: 50% !important;
     width: 38px !important;
     height: 38px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
 }}
 
-/* SEND ICON */
 [data-testid="stChatInput"] button svg {{
     fill: {TEXT_COLOR} !important;
 }}
 
-/* FEEDBACK BOX */
 textarea {{
     background: {BG_CARD} !important;
     color: {TEXT_COLOR} !important;
     border: 1px solid {BORDER} !important;
 }}
 
-/* BUTTONS */
 button {{
     background: {BG_CARD} !important;
     border: 1px solid {BORDER} !important;
     color: {TEXT_COLOR} !important;
 }}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -160,18 +142,28 @@ def get_timezone():
 
 tz = get_timezone()
 
-# ---------------- SMART LOGIC ----------------
+# ---------------- SMART LOGIC (FINAL NAME FIX) ----------------
 def smart_answer(prompt):
-    text = prompt.lower()
+    text = prompt.lower().strip()
     now = datetime.now(tz)
 
+    # ---- NAME RULES ----
+    if "creator full name" in text or "full name of creator" in text:
+        return "**Shashank N P**"
+    if "creator" in text or "who created" in text or "who made" in text:
+        return "**Shashank**"
+    if "your name" in text or "what is your name" in text:
+        return "**Rossie**"
+
+    # ---- DATE / TIME ----
     if "time" in text:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
     if "tomorrow" in text:
         tmr = now + timedelta(days=1)
         return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
-    if "today" in text or text.strip() == "date":
+    if "today" in text or text == "date":
         return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
+
     return None
 
 # ---------------- SIDEBAR ----------------
