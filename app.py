@@ -42,9 +42,16 @@ else:
 st.markdown(f"""
 <style>
 
+/* REMOVE STREAMLIT TOP/BOTTOM */
+[data-testid="stHeader"],
+[data-testid="stBottom"] {{
+    background: transparent !important;
+}}
+
 /* MAIN BACKGROUND */
 .stApp {{
     background: {BG_MAIN};
+    color: {TEXT_COLOR} !important;
 }}
 
 /* SIDEBAR */
@@ -64,30 +71,26 @@ st.markdown(f"""
     color: {TEXT_COLOR} !important;
 }}
 
-/* ASSISTANT MESSAGE BOX */
+/* ASSISTANT MESSAGE */
 .stChatMessage[data-testid="stChatMessage-assistant"] {{
     background: {BG_CARD};
     border-radius: 14px;
 }}
 
-/* 🔥 THIS IS THE FIX — STREAMLIT CANNOT OVERRIDE THIS */
-.assistant-text {{
+/* 🔥 FINAL DESKTOP + MOBILE FIX */
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
     color: #ffffff !important;
     opacity: 1 !important;
-    font-size: 16px;
-    line-height: 1.6;
 }}
 
-/* CODE BLOCKS */
-.assistant-text pre {{
+/* ❌ EXCLUDE CODE BLOCKS */
+.stChatMessage[data-testid="stChatMessage-assistant"] pre,
+.stChatMessage[data-testid="stChatMessage-assistant"] code {{
+    color: #000000 !important;
     background: #ffffff !important;
-    color: #000000 !important;
-    border-radius: 12px;
-    padding: 12px;
-}}
-
-.assistant-text code {{
-    color: #000000 !important;
+    opacity: 1 !important;
+    border-radius: 12px !important;
 }}
 
 /* CHAT INPUT */
@@ -96,22 +99,55 @@ st.markdown(f"""
     color: {TEXT_COLOR};
     border-radius: 999px;
     border: 1.5px solid {BORDER};
+    padding: 14px 64px 14px 20px;
+}}
+
+/* PLACEHOLDER */
+[data-testid="stChatInput"] textarea::placeholder {{
+    color: {PLACEHOLDER} !important;
+    opacity: 1 !important;
 }}
 
 /* SEND BUTTON */
+[data-testid="stChatInput"] button {{
+    position: absolute !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    background: {SEND_BG} !important;
+    border: 1px solid {BORDER} !important;
+    border-radius: 50% !important;
+    width: 38px !important;
+    height: 38px !important;
+}}
+
+/* SEND ICON */
 [data-testid="stChatInput"] button svg {{
-    fill: {TEXT_COLOR};
+    fill: {TEXT_COLOR} !important;
+}}
+
+/* FEEDBACK BOX */
+textarea {{
+    background: {BG_CARD} !important;
+    color: {TEXT_COLOR} !important;
+    border: 1px solid {BORDER} !important;
+}}
+
+/* BUTTONS */
+button {{
+    background: {BG_CARD} !important;
+    border: 1px solid {BORDER} !important;
+    color: {TEXT_COLOR} !important;
 }}
 
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- TIMEZONE ----------------
+# ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
-        return pytz.timezone(
-            requests.get("https://ipapi.co/json/").json().get("timezone", "UTC")
-        )
+        res = requests.get("https://ipapi.co/json/").json()
+        return pytz.timezone(res.get("timezone", "UTC"))
     except:
         return pytz.UTC
 
@@ -122,27 +158,53 @@ def smart_answer(prompt):
     text = prompt.lower().strip()
     now = datetime.now(tz)
 
-    if "creator full name" in text:
-        return "Shashank N P"
-    if "creator" in text:
-        return "Shashank"
-    if "your name" in text:
-        return "Rossie"
+    if "creator full name" in text or "full name of creator" in text:
+        return "**Shashank N P**"
+    if "creator" in text or "who created" in text or "who made" in text:
+        return "**Shashank**"
+    if "your name" in text or "what is your name" in text:
+        return "**Rossie**"
+
     if "time" in text:
-        return now.strftime("%I:%M %p")
-    if "today" in text:
-        return now.strftime("%d %B %Y")
+        return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
+    if "tomorrow" in text:
+        tmr = now + timedelta(days=1)
+        return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
+    if "today" in text or text == "date":
+        return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
     return None
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
+    st.caption("Text-based AI Assistant")
+
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
-    if st.button("🧹 Clear Chat"):
-        st.session_state.messages = []
-        st.rerun()
-    st.toggle("🌙 Dark Mode", key="dark_mode")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🧹 Clear Chat"):
+            st.session_state.messages = []
+            st.rerun()
+    with col2:
+        st.toggle("🌙 Dark Mode", key="dark_mode")
+
+    st.divider()
+    st.subheader("🆘 Help & Feedback")
+
+    feedback = st.text_area("Share your feedback or suggestions")
+    if st.button("Send Feedback"):
+        if feedback.strip():
+            requests.post(
+                "https://formspree.io/f/xblanbjk",
+                data={"message": feedback},
+                headers={"Accept": "application/json"}
+            )
+            st.success("✅ Feedback sent!")
+
+    st.divider()
+    st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
 llm = ChatGroq(
@@ -151,13 +213,18 @@ llm = ChatGroq(
     temperature=temperature,
 )
 
+# ---------------- HERO ----------------
+st.markdown("""
+<div style="margin-top:30vh;text-align:center;">
+<h1>💬 NeoMind AI</h1>
+<p>Ask. Think. Generate.</p>
+</div>
+""", unsafe_allow_html=True)
+
 # ---------------- CHAT HISTORY ----------------
 for m in st.session_state.messages:
     with st.chat_message("user" if isinstance(m, HumanMessage) else "assistant"):
-        st.markdown(
-            f"<div class='assistant-text'>{m.content}</div>",
-            unsafe_allow_html=True
-        )
+        st.markdown(m.content)
 
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
@@ -170,8 +237,5 @@ if prompt:
 
     with st.chat_message("assistant"):
         answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
-        st.markdown(
-            f"<div class='assistant-text'>{answer}</div>",
-            unsafe_allow_html=True
-        )
+        st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
