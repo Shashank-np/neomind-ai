@@ -38,11 +38,11 @@ else:
     PLACEHOLDER = "#5b7fa3"
     SEND_BG = "#ffffff"
 
-# ---------------- FINAL UI FIX ----------------
+# ---------------- UI STYLE ----------------
 st.markdown(f"""
 <style>
 
-/* REMOVE STREAMLIT DEFAULT BARS */
+/* REMOVE STREAMLIT BARS */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {{
     background: transparent !important;
@@ -68,34 +68,24 @@ st.markdown(f"""
     border-radius: 14px;
 }}
 
-/* USER MESSAGE */
+/* USER TEXT */
 .stChatMessage[data-testid="stChatMessage-user"] * {{
     color: {TEXT_COLOR} !important;
 }}
 
-/* ASSISTANT TEXT FIX */
-.assistant-text {{
+/* ASSISTANT TEXT */
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
     color: {TEXT_COLOR} !important;
     opacity: 1 !important;
-    line-height: 1.6;
-    font-size: 16px;
 }}
 
-/* ASSISTANT CODE BLOCKS */
-.assistant-text pre {{
+/* CODE BLOCKS */
+.stChatMessage[data-testid="stChatMessage-assistant"] pre,
+.stChatMessage[data-testid="stChatMessage-assistant"] code {{
     background: #ffffff !important;
     color: #000000 !important;
-    padding: 14px !important;
     border-radius: 12px !important;
-    overflow-x: auto !important;
-}}
-
-/* INLINE CODE */
-.assistant-text code {{
-    background: #f1f5f9 !important;
-    color: #000000 !important;
-    padding: 2px 6px;
-    border-radius: 6px;
 }}
 
 /* CHAT INPUT */
@@ -130,8 +120,14 @@ st.markdown(f"""
     fill: {TEXT_COLOR} !important;
 }}
 
-/* FEEDBACK TEXTAREA */
+/* FEEDBACK */
 textarea {{
+    background: {BG_CARD} !important;
+    color: {TEXT_COLOR} !important;
+    border: 1px solid {BORDER} !important;
+}}
+
+button {{
     background: {BG_CARD} !important;
     color: {TEXT_COLOR} !important;
     border: 1px solid {BORDER} !important;
@@ -140,7 +136,7 @@ textarea {{
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- USER TIMEZONE ----------------
+# ---------------- TIMEZONE ----------------
 def get_timezone():
     try:
         res = requests.get("https://ipapi.co/json/").json()
@@ -150,7 +146,7 @@ def get_timezone():
 
 tz = get_timezone()
 
-# ---------------- SMART LOGIC ----------------
+# ---------------- SMART ANSWER ----------------
 def smart_answer(prompt):
     text = prompt.lower().strip()
     now = datetime.now(tz)
@@ -186,6 +182,7 @@ with st.sidebar:
     with col2:
         st.toggle("🌙 Dark Mode", key="dark_mode")
 
+    # 🔥 FEEDBACK SECTION ADDED
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
@@ -220,13 +217,7 @@ st.markdown("""
 # ---------------- CHAT HISTORY ----------------
 for m in st.session_state.messages:
     with st.chat_message("user" if isinstance(m, HumanMessage) else "assistant"):
-        if isinstance(m, AIMessage):
-            st.markdown(
-                f"<div class='assistant-text'>{m.content}</div>",
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(m.content)
+        st.markdown(m.content)
 
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
@@ -240,7 +231,4 @@ if prompt:
     with st.chat_message("assistant"):
         answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
         st.session_state.messages.append(AIMessage(content=answer))
-        st.markdown(
-            f"<div class='assistant-text'>{answer}</div>",
-            unsafe_allow_html=True
-        )
+        st.markdown(answer)
