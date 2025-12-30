@@ -24,9 +24,9 @@ if "dark_mode" not in st.session_state:
 if st.session_state.dark_mode:
     BG_MAIN = "#0f172a"
     BG_SIDEBAR = "#020617"
-    BG_CARD = "#020617"     # DARK BOX
-    TEXT_COLOR = "#ffffff" # GENERAL TEXT
-    ASSIST_TEXT = "#000000"  # 🔥 GENERATED TEXT (BLACK)
+    BG_CARD = "#020617"
+    TEXT_COLOR = "#ffffff"
+    ASSIST_TEXT = "#000000"   # REQUIRED
     BORDER = "#334155"
     PLACEHOLDER = "#ffffff"
     SEND_BG = "#1e293b"
@@ -35,7 +35,7 @@ else:
     BG_SIDEBAR = "#d9f0ff"
     BG_CARD = "#ffffff"
     TEXT_COLOR = "#000000"
-    ASSIST_TEXT = "#000000"
+    ASSIST_TEXT = "#000000"   # REQUIRED
     BORDER = "#aaccee"
     PLACEHOLDER = "#5b7fa3"
     SEND_BG = "#ffffff"
@@ -69,17 +69,31 @@ st.markdown(f"""
     background: {BG_CARD};
     border-radius: 14px;
 }}
-.stChatMessage[data-testid="stChatMessage-user"] * {{
+.stChatMessage[data-testid="stChatMessage-user"] p,
+.stChatMessage[data-testid="stChatMessage-user"] span {{
     color: {TEXT_COLOR} !important;
 }}
 
-/* ASSISTANT MESSAGE (OUTPUT FIX) */
+/* ASSISTANT MESSAGE — FINAL FIX */
 .stChatMessage[data-testid="stChatMessage-assistant"] {{
     background: {BG_CARD};
     border-radius: 14px;
 }}
-.stChatMessage[data-testid="stChatMessage-assistant"] * {{
+
+/* Force ALL assistant content colors */
+.stChatMessage[data-testid="stChatMessage-assistant"] p,
+.stChatMessage[data-testid="stChatMessage-assistant"] span,
+.stChatMessage[data-testid="stChatMessage-assistant"] li,
+.stChatMessage[data-testid="stChatMessage-assistant"] strong,
+.stChatMessage[data-testid="stChatMessage-assistant"] em {{
     color: {ASSIST_TEXT} !important;
+}}
+
+/* Code blocks */
+.stChatMessage[data-testid="stChatMessage-assistant"] pre,
+.stChatMessage[data-testid="stChatMessage-assistant"] code {{
+    color: {ASSIST_TEXT} !important;
+    background: #f1f5f9 !important;
 }}
 
 /* CHAT INPUT */
