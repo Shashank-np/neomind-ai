@@ -27,8 +27,8 @@ if st.session_state.dark_mode:
     BG_CARD = "#020617"
     TEXT_COLOR = "#ffffff"
     BORDER = "#334155"
-    PLACEHOLDER = "#ffffff"
-    SEND_BG = "#1e293b"
+    PLACEHOLDER = "#cbd5f5"
+    ASSISTANT_TEXT = "#ffffff"
 else:
     BG_MAIN = "#e6f7ff"
     BG_SIDEBAR = "#d9f0ff"
@@ -36,19 +36,19 @@ else:
     TEXT_COLOR = "#000000"
     BORDER = "#aaccee"
     PLACEHOLDER = "#5b7fa3"
-    SEND_BG = "#ffffff"
+    ASSISTANT_TEXT = "#000000"
 
 # ---------------- FINAL UI ----------------
 st.markdown(f"""
 <style>
 
-/* REMOVE STREAMLIT TOP/BOTTOM */
+/* REMOVE HEADER SPACE (MOBILE FIX) */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {{
-    background: transparent !important;
+    display: none;
 }}
 
-/* MAIN BACKGROUND */
+/* MAIN */
 .stApp {{
     background: {BG_MAIN};
     color: {TEXT_COLOR} !important;
@@ -60,6 +60,12 @@ st.markdown(f"""
 }}
 [data-testid="stSidebar"] * {{
     color: {TEXT_COLOR} !important;
+}}
+
+/* CHAT CONTAINER — REMOVE LEFT GAP (MOBILE) */
+section.main > div {{
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
 }}
 
 /* USER MESSAGE */
@@ -76,23 +82,19 @@ st.markdown(f"""
     background: {BG_CARD};
     border-radius: 14px;
 }}
-
-/* ✅ FINAL FIX — FORCE WHITE TEXT EVERYWHERE (DESKTOP + MOBILE) */
 .stChatMessage[data-testid="stChatMessage-assistant"] *:not(pre):not(code) {{
-    color: #ffffff !important;
+    color: {ASSISTANT_TEXT} !important;
     opacity: 1 !important;
 }}
 
-/* ✅ CODE BLOCKS (UNCHANGED) */
+/* CODE BLOCKS */
 .stChatMessage[data-testid="stChatMessage-assistant"] pre {{
     background: #ffffff !important;
     color: #000000 !important;
-    border-radius: 12px !important;
+    border-radius: 12px;
 }}
-
 .stChatMessage[data-testid="stChatMessage-assistant"] code {{
     color: #000000 !important;
-    background: transparent !important;
 }}
 
 /* CHAT INPUT */
@@ -103,49 +105,24 @@ st.markdown(f"""
     border: 1.5px solid {BORDER};
     padding: 14px 64px 14px 20px;
 }}
-
-/* PLACEHOLDER */
 [data-testid="stChatInput"] textarea::placeholder {{
     color: {PLACEHOLDER} !important;
-    opacity: 1 !important;
 }}
 
 /* SEND BUTTON */
 [data-testid="stChatInput"] button {{
-    position: absolute !important;
-    right: 12px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    background: {SEND_BG} !important;
-    border: 1px solid {BORDER} !important;
-    border-radius: 50% !important;
-    width: 38px !important;
-    height: 38px !important;
+    background: {BG_CARD};
+    border: 1px solid {BORDER};
+    border-radius: 50%;
 }}
-
-/* SEND ICON */
 [data-testid="stChatInput"] button svg {{
-    fill: {TEXT_COLOR} !important;
-}}
-
-/* FEEDBACK BOX */
-textarea {{
-    background: {BG_CARD} !important;
-    color: {TEXT_COLOR} !important;
-    border: 1px solid {BORDER} !important;
-}}
-
-/* BUTTONS */
-button {{
-    background: {BG_CARD} !important;
-    border: 1px solid {BORDER} !important;
-    color: {TEXT_COLOR} !important;
+    fill: {TEXT_COLOR};
 }}
 
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- USER TIMEZONE ----------------
+# ---------------- TIMEZONE ----------------
 def get_timezone():
     try:
         res = requests.get("https://ipapi.co/json/").json()
@@ -160,12 +137,11 @@ def smart_answer(prompt):
     text = prompt.lower().strip()
     now = datetime.now(tz)
 
-    if "creator full name" in text or "full name of creator" in text:
+    if "your name" in text:
+        return "**rossie**"
+
+    if "creator" in text or "created" in text or "who made" in text:
         return "**Shashank N P**"
-    if "creator" in text or "who created" in text or "who made" in text:
-        return "**Shashank**"
-    if "your name" in text or "what is your name" in text:
-        return "**Rossie**"
 
     if "time" in text:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
@@ -196,14 +172,13 @@ with st.sidebar:
     st.subheader("🆘 Help & Feedback")
 
     feedback = st.text_area("Share your feedback or suggestions")
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={"message": feedback},
-                headers={"Accept": "application/json"}
-            )
-            st.success("✅ Feedback sent!")
+    if st.button("Send Feedback") and feedback.strip():
+        requests.post(
+            "https://formspree.io/f/xblanbjk",
+            data={"message": feedback},
+            headers={"Accept": "application/json"}
+        )
+        st.success("✅ Feedback sent!")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -216,12 +191,13 @@ llm = ChatGroq(
 )
 
 # ---------------- HERO ----------------
-st.markdown("""
-<div style="margin-top:30vh;text-align:center;">
-<h1>💬 NeoMind AI</h1>
-<p>Ask. Think. Generate.</p>
-</div>
-""", unsafe_allow_html=True)
+if not st.session_state.messages:
+    st.markdown("""
+    <div style="margin-top:30vh;text-align:center;">
+    <h1>💬 NeoMind AI</h1>
+    <p>Ask. Think. Generate.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ---------------- CHAT HISTORY ----------------
 for m in st.session_state.messages:
