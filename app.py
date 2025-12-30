@@ -38,7 +38,7 @@ else:
     PLACEHOLDER = "#5b7fa3"
     SEND_BG = "#ffffff"
 
-# ---------------- UI STYLE ----------------
+# ---------------- UI STYLE (VISIBILITY FIX APPLIED) ----------------
 st.markdown(f"""
 <style>
 
@@ -68,24 +68,25 @@ st.markdown(f"""
     border-radius: 14px;
 }}
 
-/* USER TEXT */
+/* USER MESSAGE TEXT */
 .stChatMessage[data-testid="stChatMessage-user"] * {{
     color: {TEXT_COLOR} !important;
 }}
 
-/* ASSISTANT TEXT */
+/* ✅ ASSISTANT TEXT VISIBILITY FIX (KEY FIX) */
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
     color: {TEXT_COLOR} !important;
     opacity: 1 !important;
 }}
 
-/* CODE BLOCKS */
+/* ✅ CODE BLOCKS ALWAYS READABLE */
 .stChatMessage[data-testid="stChatMessage-assistant"] pre,
 .stChatMessage[data-testid="stChatMessage-assistant"] code {{
     background: #ffffff !important;
     color: #000000 !important;
     border-radius: 12px !important;
+    opacity: 1 !important;
 }}
 
 /* CHAT INPUT */
@@ -120,7 +121,7 @@ st.markdown(f"""
     fill: {TEXT_COLOR} !important;
 }}
 
-/* FEEDBACK */
+/* FEEDBACK BOX */
 textarea {{
     background: {BG_CARD} !important;
     color: {TEXT_COLOR} !important;
@@ -182,19 +183,17 @@ with st.sidebar:
     with col2:
         st.toggle("🌙 Dark Mode", key="dark_mode")
 
-    # 🔥 FEEDBACK SECTION ADDED
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
     feedback = st.text_area("Share your feedback or suggestions")
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={"message": feedback},
-                headers={"Accept": "application/json"}
-            )
-            st.success("✅ Feedback sent!")
+    if st.button("Send Feedback") and feedback.strip():
+        requests.post(
+            "https://formspree.io/f/xblanbjk",
+            data={"message": feedback},
+            headers={"Accept": "application/json"}
+        )
+        st.success("✅ Feedback sent!")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
