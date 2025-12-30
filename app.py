@@ -48,19 +48,17 @@ else:
 st.markdown(f"""
 <style>
 
-/* REMOVE STREAMLIT TOP/BOTTOM */
+/* REMOVE STREAMLIT HEADER */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {{
-    background: transparent !important;
+    display: none;
 }}
 
-/* MAIN */
 .stApp {{
     background: {BG_MAIN};
     color: {TEXT_COLOR};
 }}
 
-/* REMOVE MOBILE SIDE SPACE */
 .block-container {{
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
@@ -79,29 +77,29 @@ st.markdown(f"""
     background: {BG_CARD};
     border-radius: 14px;
 }}
-.stChatMessage[data-testid="stChatMessage-user"] * {{
-    color: {TEXT_COLOR} !important;
-}}
 
 /* ASSISTANT MESSAGE */
 .stChatMessage[data-testid="stChatMessage-assistant"] {{
     background: {BG_CARD};
     border-radius: 14px;
 }}
-.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
-.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
+
+/* ✅ FIXED ASSISTANT TEXT */
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown p,
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown li,
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown h1,
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown h2,
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown h3 {{
     color: {ASSIST_TEXT} !important;
     opacity: 1 !important;
 }}
 
 /* CODE BLOCKS */
-.stChatMessage[data-testid="stChatMessage-assistant"] pre {{
+.stChatMessage[data-testid="stChatMessage-assistant"] pre,
+.stChatMessage[data-testid="stChatMessage-assistant"] code {{
     background: {CODE_BG} !important;
     color: {CODE_TEXT} !important;
     border-radius: 12px;
-}}
-.stChatMessage[data-testid="stChatMessage-assistant"] code {{
-    color: {CODE_TEXT} !important;
 }}
 
 /* CHAT INPUT */
@@ -113,28 +111,24 @@ st.markdown(f"""
     padding: 14px 64px 14px 20px;
 }}
 
-/* PLACEHOLDER */
 [data-testid="stChatInput"] textarea::placeholder {{
     color: {PLACEHOLDER} !important;
-    opacity: 1 !important;
 }}
 
-/* SEND BUTTON */
 [data-testid="stChatInput"] button {{
-    position: absolute !important;
-    right: 12px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    background: {SEND_BG} !important;
-    border: 1px solid {BORDER} !important;
-    border-radius: 50% !important;
-    width: 38px !important;
-    height: 38px !important;
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: {SEND_BG};
+    border: 1px solid {BORDER};
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
 }}
 
-/* SEND ICON */
 [data-testid="stChatInput"] button svg {{
-    fill: {TEXT_COLOR} !important;
+    fill: {TEXT_COLOR};
 }}
 
 </style>
@@ -143,8 +137,7 @@ st.markdown(f"""
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
-        res = requests.get("https://ipapi.co/json/").json()
-        return pytz.timezone(res.get("timezone", "UTC"))
+        return pytz.timezone(requests.get("https://ipapi.co/json/").json().get("timezone"))
     except:
         return pytz.UTC
 
@@ -157,20 +150,10 @@ def smart_answer(prompt):
 
     if "your name" in text:
         return "**Rossie**"
-
-    if "creator" in text or "who created" in text or "creator name" in text:
+    if "creator" in text or "who created" in text:
         return "**Shashank N P**"
-
     if "time" in text:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
-
-    if "tomorrow" in text:
-        tmr = now + timedelta(days=1)
-        return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
-
-    if "today" in text or text == "date":
-        return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
-
     return None
 
 # ---------------- SIDEBAR ----------------
@@ -187,6 +170,18 @@ with st.sidebar:
             st.rerun()
     with col2:
         st.toggle("🌙 Dark Mode", key="dark_mode")
+
+    st.divider()
+    st.subheader("🆘 Help & Feedback")
+    feedback = st.text_area("Share your feedback or suggestions")
+    if st.button("Send Feedback"):
+        if feedback.strip():
+            requests.post(
+                "https://formspree.io/f/xblanbjk",
+                data={"message": feedback},
+                headers={"Accept": "application/json"}
+            )
+            st.success("✅ Feedback sent!")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
