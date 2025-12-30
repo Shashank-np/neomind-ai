@@ -27,12 +27,16 @@ if st.session_state.dark_mode:
     BG_CARD = "#020617"
     TEXT_COLOR = "#ffffff"
     BORDER = "#334155"
+    PLACEHOLDER = "#ffffff"
+    SEND_BG = "#1e293b"
 else:
     BG_MAIN = "#e6f7ff"
     BG_SIDEBAR = "#d9f0ff"
     BG_CARD = "#ffffff"
     TEXT_COLOR = "#000000"
     BORDER = "#aaccee"
+    PLACEHOLDER = "#5b7fa3"
+    SEND_BG = "#ffffff"
 
 # ---------------- FINAL UI ----------------
 st.markdown(f"""
@@ -58,31 +62,56 @@ st.markdown(f"""
     color: {TEXT_COLOR} !important;
 }}
 
-/* USER MESSAGE */
-.stChatMessage[data-testid="stChatMessage-user"] {{
+/* USER & ASSISTANT MESSAGES */
+.stChatMessage {{
     background: {BG_CARD};
     border-radius: 14px;
 }}
-.stChatMessage[data-testid="stChatMessage-user"] * {{
-    color: {TEXT_COLOR} !important;
-}}
-
-/* ASSISTANT MESSAGE */
-.stChatMessage[data-testid="stChatMessage-assistant"] {{
-    background: {BG_CARD};
-    border-radius: 14px;
-}}
-.stChatMessage[data-testid="stChatMessage-assistant"] * {{
+.stChatMessage * {{
     color: {TEXT_COLOR} !important;
 }}
 
 /* CHAT INPUT */
+[data-testid="stChatInput"] {{
+    position: relative;
+}}
+
 [data-testid="stChatInput"] textarea {{
     background: {BG_CARD};
     color: {TEXT_COLOR};
     border-radius: 999px;
     border: 1.5px solid {BORDER};
-    padding: 14px 60px 14px 20px;
+    padding: 14px 64px 14px 20px;
+}}
+
+/* PLACEHOLDER FIX */
+[data-testid="stChatInput"] textarea::placeholder {{
+    color: {PLACEHOLDER} !important;
+    opacity: 1 !important;
+}}
+
+/* SEND BUTTON FIX */
+[data-testid="stChatInput"] button {{
+    position: absolute !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    background: {SEND_BG} !important;
+    border: 1px solid {BORDER} !important;
+    border-radius: 50% !important;
+    width: 38px !important;
+    height: 38px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+}}
+
+/* SEND ICON */
+[data-testid="stChatInput"] button svg {{
+    fill: {TEXT_COLOR} !important;
+    width: 20px !important;
+    height: 20px !important;
 }}
 
 /* FEEDBACK BOX */
@@ -97,10 +126,6 @@ button {{
     background: {BG_CARD} !important;
     border: 1px solid {BORDER} !important;
     color: {TEXT_COLOR} !important;
-}}
-
-button:hover {{
-    opacity: 0.9;
 }}
 
 </style>
@@ -123,14 +148,11 @@ def smart_answer(prompt):
 
     if "time" in text:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
-
     if "tomorrow" in text:
         tmr = now + timedelta(days=1)
         return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
-
     if "today" in text or text.strip() == "date":
         return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
-
     return None
 
 # ---------------- SIDEBAR ----------------
@@ -141,24 +163,17 @@ with st.sidebar:
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     col1, col2 = st.columns(2)
-
     with col1:
         if st.button("🧹 Clear Chat"):
             st.session_state.messages = []
             st.rerun()
-
     with col2:
-        st.toggle(
-            "🌙 Dark Mode",
-            value=st.session_state.dark_mode,
-            key="dark_mode"
-        )
+        st.toggle("🌙 Dark Mode", key="dark_mode")
 
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
     feedback = st.text_area("Share your feedback or suggestions")
-
     if st.button("Send Feedback"):
         if feedback.strip():
             requests.post(
@@ -201,11 +216,6 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        local = smart_answer(prompt)
-        if local:
-            answer = local
-        else:
-            answer = llm.invoke(st.session_state.messages).content
-
+        answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
