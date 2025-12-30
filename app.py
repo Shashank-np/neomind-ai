@@ -22,36 +22,42 @@ if "dark_mode" not in st.session_state:
 
 # ---------------- THEME COLORS ----------------
 if st.session_state.dark_mode:
-    BG_MAIN = "#0f172a"
+    BG_MAIN = "#0b1220"
     BG_SIDEBAR = "#020617"
     BG_CARD = "#020617"
     TEXT_COLOR = "#ffffff"
+    ASSIST_TEXT = "#e5e7eb"
     BORDER = "#334155"
-    PLACEHOLDER = "#ffffff"
+    PLACEHOLDER = "#cbd5f5"
     SEND_BG = "#1e293b"
+    CODE_BG = "#020617"
+    CODE_TEXT = "#e5e7eb"
 else:
     BG_MAIN = "#e6f7ff"
     BG_SIDEBAR = "#d9f0ff"
     BG_CARD = "#ffffff"
     TEXT_COLOR = "#000000"
+    ASSIST_TEXT = "#0f172a"
     BORDER = "#aaccee"
     PLACEHOLDER = "#5b7fa3"
     SEND_BG = "#ffffff"
+    CODE_BG = "#f8fafc"
+    CODE_TEXT = "#020617"
 
-# ---------------- FINAL UI ----------------
+# ---------------- FINAL UI (MOBILE + DESKTOP FIX) ----------------
 st.markdown(f"""
 <style>
 
-/* REMOVE STREAMLIT TOP/BOTTOM */
+/* REMOVE STREAMLIT HEADER/FOOTER */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {{
-    background: transparent !important;
+    display: none;
 }}
 
-/* MAIN BACKGROUND */
+/* MAIN */
 .stApp {{
     background: {BG_MAIN};
-    color: {TEXT_COLOR} !important;
+    color: {TEXT_COLOR};
 }}
 
 /* SIDEBAR */
@@ -59,38 +65,44 @@ st.markdown(f"""
     background: {BG_SIDEBAR};
 }}
 [data-testid="stSidebar"] * {{
-    color: {TEXT_COLOR} !important;
+    color: {TEXT_COLOR};
+}}
+
+/* CHAT WRAPPER – FIX MOBILE SPACING */
+.block-container {{
+    padding-left: 0.8rem !important;
+    padding-right: 0.8rem !important;
 }}
 
 /* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] {{
     background: {BG_CARD};
-    border-radius: 14px;
+    border-radius: 16px;
 }}
 .stChatMessage[data-testid="stChatMessage-user"] * {{
-    color: {TEXT_COLOR} !important;
+    color: {TEXT_COLOR};
 }}
 
 /* ASSISTANT MESSAGE */
 .stChatMessage[data-testid="stChatMessage-assistant"] {{
     background: {BG_CARD};
-    border-radius: 14px;
+    border-radius: 16px;
 }}
-
-/* 🔥 FINAL DESKTOP + MOBILE FIX */
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
-    color: #ffffff !important;
+    color: {ASSIST_TEXT} !important;
     opacity: 1 !important;
 }}
 
-/* ❌ EXCLUDE CODE BLOCKS */
-.stChatMessage[data-testid="stChatMessage-assistant"] pre,
+/* CODE BLOCKS */
+.stChatMessage[data-testid="stChatMessage-assistant"] pre {{
+    background: {CODE_BG} !important;
+    color: {CODE_TEXT} !important;
+    border-radius: 14px;
+    padding: 14px;
+}}
 .stChatMessage[data-testid="stChatMessage-assistant"] code {{
-    color: #000000 !important;
-    background: #ffffff !important;
-    opacity: 1 !important;
-    border-radius: 12px !important;
+    color: {CODE_TEXT} !important;
 }}
 
 /* CHAT INPUT */
@@ -104,40 +116,25 @@ st.markdown(f"""
 
 /* PLACEHOLDER */
 [data-testid="stChatInput"] textarea::placeholder {{
-    color: {PLACEHOLDER} !important;
-    opacity: 1 !important;
+    color: {PLACEHOLDER};
 }}
 
 /* SEND BUTTON */
 [data-testid="stChatInput"] button {{
-    position: absolute !important;
-    right: 12px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    background: {SEND_BG} !important;
-    border: 1px solid {BORDER} !important;
-    border-radius: 50% !important;
-    width: 38px !important;
-    height: 38px !important;
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: {SEND_BG};
+    border: 1px solid {BORDER};
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
 }}
 
 /* SEND ICON */
 [data-testid="stChatInput"] button svg {{
-    fill: {TEXT_COLOR} !important;
-}}
-
-/* FEEDBACK BOX */
-textarea {{
-    background: {BG_CARD} !important;
-    color: {TEXT_COLOR} !important;
-    border: 1px solid {BORDER} !important;
-}}
-
-/* BUTTONS */
-button {{
-    background: {BG_CARD} !important;
-    border: 1px solid {BORDER} !important;
-    color: {TEXT_COLOR} !important;
+    fill: {TEXT_COLOR};
 }}
 
 </style>
@@ -158,18 +155,19 @@ def smart_answer(prompt):
     text = prompt.lower().strip()
     now = datetime.now(tz)
 
-    if "creator full name" in text or "full name of creator" in text:
-        return "**Shashank N P**"
-    if "creator" in text or "who created" in text or "who made" in text:
-        return "**Shashank**"
-    if "your name" in text or "what is your name" in text:
+    if "your name" in text:
         return "**Rossie**"
+
+    if "creator" in text or "who created" in text or "creator name" in text:
+        return "**Shashank N P**"
 
     if "time" in text:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
+
     if "tomorrow" in text:
         tmr = now + timedelta(days=1)
         return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
+
     if "today" in text or text == "date":
         return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
@@ -191,19 +189,6 @@ with st.sidebar:
         st.toggle("🌙 Dark Mode", key="dark_mode")
 
     st.divider()
-    st.subheader("🆘 Help & Feedback")
-
-    feedback = st.text_area("Share your feedback or suggestions")
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={"message": feedback},
-                headers={"Accept": "application/json"}
-            )
-            st.success("✅ Feedback sent!")
-
-    st.divider()
     st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
@@ -215,7 +200,7 @@ llm = ChatGroq(
 
 # ---------------- HERO ----------------
 st.markdown("""
-<div style="margin-top:30vh;text-align:center;">
+<div style="margin-top:28vh;text-align:center;">
 <h1>💬 NeoMind AI</h1>
 <p>Ask. Think. Generate.</p>
 </div>
