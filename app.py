@@ -24,8 +24,9 @@ if "dark_mode" not in st.session_state:
 if st.session_state.dark_mode:
     BG_MAIN = "#0f172a"
     BG_SIDEBAR = "#020617"
-    BG_CARD = "#020617"
-    TEXT_COLOR = "#ffffff"
+    BG_CARD = "#020617"     # DARK BOX
+    TEXT_COLOR = "#ffffff" # GENERAL TEXT
+    ASSIST_TEXT = "#000000"  # 🔥 GENERATED TEXT (BLACK)
     BORDER = "#334155"
     PLACEHOLDER = "#ffffff"
     SEND_BG = "#1e293b"
@@ -34,6 +35,7 @@ else:
     BG_SIDEBAR = "#d9f0ff"
     BG_CARD = "#ffffff"
     TEXT_COLOR = "#000000"
+    ASSIST_TEXT = "#000000"
     BORDER = "#aaccee"
     PLACEHOLDER = "#5b7fa3"
     SEND_BG = "#ffffff"
@@ -62,20 +64,25 @@ st.markdown(f"""
     color: {TEXT_COLOR} !important;
 }}
 
-/* USER & ASSISTANT MESSAGES */
-.stChatMessage {{
+/* USER MESSAGE */
+.stChatMessage[data-testid="stChatMessage-user"] {{
     background: {BG_CARD};
     border-radius: 14px;
 }}
-.stChatMessage * {{
+.stChatMessage[data-testid="stChatMessage-user"] * {{
     color: {TEXT_COLOR} !important;
 }}
 
-/* CHAT INPUT */
-[data-testid="stChatInput"] {{
-    position: relative;
+/* ASSISTANT MESSAGE (OUTPUT FIX) */
+.stChatMessage[data-testid="stChatMessage-assistant"] {{
+    background: {BG_CARD};
+    border-radius: 14px;
+}}
+.stChatMessage[data-testid="stChatMessage-assistant"] * {{
+    color: {ASSIST_TEXT} !important;
 }}
 
+/* CHAT INPUT */
 [data-testid="stChatInput"] textarea {{
     background: {BG_CARD};
     color: {TEXT_COLOR};
@@ -84,13 +91,13 @@ st.markdown(f"""
     padding: 14px 64px 14px 20px;
 }}
 
-/* PLACEHOLDER FIX */
+/* PLACEHOLDER */
 [data-testid="stChatInput"] textarea::placeholder {{
     color: {PLACEHOLDER} !important;
     opacity: 1 !important;
 }}
 
-/* SEND BUTTON FIX */
+/* SEND BUTTON */
 [data-testid="stChatInput"] button {{
     position: absolute !important;
     right: 12px !important;
@@ -104,14 +111,11 @@ st.markdown(f"""
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 0 !important;
 }}
 
 /* SEND ICON */
 [data-testid="stChatInput"] button svg {{
     fill: {TEXT_COLOR} !important;
-    width: 20px !important;
-    height: 20px !important;
 }}
 
 /* FEEDBACK BOX */
