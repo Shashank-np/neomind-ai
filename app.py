@@ -22,13 +22,13 @@ if "dark_mode" not in st.session_state:
 
 # ---------------- THEME COLORS ----------------
 if st.session_state.dark_mode:
-    BG_MAIN = "#0f172a"
+    BG_MAIN = "#0b1220"
     BG_SIDEBAR = "#020617"
     BG_CARD = "#020617"
     TEXT_COLOR = "#ffffff"
     ASSIST_TEXT = "#e5e7eb"
     BORDER = "#334155"
-    PLACEHOLDER = "#ffffff"
+    PLACEHOLDER = "#cbd5f5"
     SEND_BG = "#1e293b"
     CODE_BG = "#020617"
     CODE_TEXT = "#e5e7eb"
@@ -44,14 +44,14 @@ else:
     CODE_BG = "#f8fafc"
     CODE_TEXT = "#020617"
 
-# ---------------- FINAL UI ----------------
+# ---------------- FINAL UI (MOBILE + DESKTOP FIX) ----------------
 st.markdown(f"""
 <style>
 
-/* REMOVE STREAMLIT TOP/BOTTOM */
+/* REMOVE STREAMLIT HEADER/FOOTER */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {{
-    background: transparent !important;
+    display: none;
 }}
 
 /* MAIN */
@@ -60,33 +60,33 @@ st.markdown(f"""
     color: {TEXT_COLOR};
 }}
 
-/* REMOVE MOBILE SIDE SPACE */
-.block-container {{
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-}}
-
 /* SIDEBAR */
 [data-testid="stSidebar"] {{
     background: {BG_SIDEBAR};
 }}
 [data-testid="stSidebar"] * {{
-    color: {TEXT_COLOR} !important;
+    color: {TEXT_COLOR};
+}}
+
+/* CHAT WRAPPER – FIX MOBILE SPACING */
+.block-container {{
+    padding-left: 0.8rem !important;
+    padding-right: 0.8rem !important;
 }}
 
 /* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] {{
     background: {BG_CARD};
-    border-radius: 14px;
+    border-radius: 16px;
 }}
 .stChatMessage[data-testid="stChatMessage-user"] * {{
-    color: {TEXT_COLOR} !important;
+    color: {TEXT_COLOR};
 }}
 
 /* ASSISTANT MESSAGE */
 .stChatMessage[data-testid="stChatMessage-assistant"] {{
     background: {BG_CARD};
-    border-radius: 14px;
+    border-radius: 16px;
 }}
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
@@ -98,7 +98,8 @@ st.markdown(f"""
 .stChatMessage[data-testid="stChatMessage-assistant"] pre {{
     background: {CODE_BG} !important;
     color: {CODE_TEXT} !important;
-    border-radius: 12px;
+    border-radius: 14px;
+    padding: 14px;
 }}
 .stChatMessage[data-testid="stChatMessage-assistant"] code {{
     color: {CODE_TEXT} !important;
@@ -115,26 +116,25 @@ st.markdown(f"""
 
 /* PLACEHOLDER */
 [data-testid="stChatInput"] textarea::placeholder {{
-    color: {PLACEHOLDER} !important;
-    opacity: 1 !important;
+    color: {PLACEHOLDER};
 }}
 
 /* SEND BUTTON */
 [data-testid="stChatInput"] button {{
-    position: absolute !important;
-    right: 12px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    background: {SEND_BG} !important;
-    border: 1px solid {BORDER} !important;
-    border-radius: 50% !important;
-    width: 38px !important;
-    height: 38px !important;
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: {SEND_BG};
+    border: 1px solid {BORDER};
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
 }}
 
 /* SEND ICON */
 [data-testid="stChatInput"] button svg {{
-    fill: {TEXT_COLOR} !important;
+    fill: {TEXT_COLOR};
 }}
 
 </style>
@@ -200,7 +200,7 @@ llm = ChatGroq(
 
 # ---------------- HERO ----------------
 st.markdown("""
-<div style="margin-top:30vh;text-align:center;">
+<div style="margin-top:28vh;text-align:center;">
 <h1>💬 NeoMind AI</h1>
 <p>Ask. Think. Generate.</p>
 </div>
