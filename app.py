@@ -25,7 +25,7 @@ if st.session_state.dark_mode:
     BG_MAIN = "#0f172a"
     BG_SIDEBAR = "#020617"
     BG_CARD = "#020617"
-    TEXT_COLOR = "#ffffff"
+    TEXT_COLOR = "#ffffff"     # WHITE text in dark mode
     BORDER = "#334155"
     PLACEHOLDER = "#ffffff"
     SEND_BG = "#1e293b"
@@ -33,12 +33,12 @@ else:
     BG_MAIN = "#e6f7ff"
     BG_SIDEBAR = "#d9f0ff"
     BG_CARD = "#ffffff"
-    TEXT_COLOR = "#000000"
+    TEXT_COLOR = "#000000"     # BLACK text in light mode
     BORDER = "#aaccee"
     PLACEHOLDER = "#5b7fa3"
     SEND_BG = "#ffffff"
 
-# ---------------- FINAL UI ----------------
+# ---------------- FINAL UI (ONLY FIXED PART) ----------------
 st.markdown(f"""
 <style>
 
@@ -77,14 +77,14 @@ st.markdown(f"""
     border-radius: 14px;
 }}
 
-/* 🔥 FINAL DESKTOP + MOBILE FIX */
+/* ✅ FIX: ASSISTANT GENERATED TEXT (DESKTOP + MOBILE) */
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
-    color: #ffffff !important;
+    color: {TEXT_COLOR} !important;
     opacity: 1 !important;
 }}
 
-/* ❌ EXCLUDE CODE BLOCKS */
+/* ✅ FIX: CODE BLOCKS ALWAYS BLACK TEXT */
 .stChatMessage[data-testid="stChatMessage-assistant"] pre,
 .stChatMessage[data-testid="stChatMessage-assistant"] code {{
     color: #000000 !important;
