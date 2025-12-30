@@ -38,11 +38,11 @@ else:
     PLACEHOLDER = "#5b7fa3"
     SEND_BG = "#ffffff"
 
-# ---------------- UI STYLE (VISIBILITY FIX APPLIED) ----------------
+# ---------------- FINAL UI FIX ----------------
 st.markdown(f"""
 <style>
 
-/* REMOVE STREAMLIT BARS */
+/* REMOVE STREAMLIT DEFAULT BARS */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {{
     background: transparent !important;
@@ -68,25 +68,34 @@ st.markdown(f"""
     border-radius: 14px;
 }}
 
-/* USER MESSAGE TEXT */
+/* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] * {{
     color: {TEXT_COLOR} !important;
 }}
 
-/* ✅ ASSISTANT TEXT VISIBILITY FIX (KEY FIX) */
-.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
-.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
+/* ASSISTANT TEXT FIX (🔥 MOST IMPORTANT 🔥) */
+.assistant-text {{
     color: {TEXT_COLOR} !important;
     opacity: 1 !important;
+    line-height: 1.6;
+    font-size: 16px;
 }}
 
-/* ✅ CODE BLOCKS ALWAYS READABLE */
-.stChatMessage[data-testid="stChatMessage-assistant"] pre,
-.stChatMessage[data-testid="stChatMessage-assistant"] code {{
+/* ASSISTANT CODE BLOCKS */
+.assistant-text pre {{
     background: #ffffff !important;
     color: #000000 !important;
+    padding: 14px !important;
     border-radius: 12px !important;
-    opacity: 1 !important;
+    overflow-x: auto !important;
+}}
+
+/* INLINE CODE */
+.assistant-text code {{
+    background: #f1f5f9 !important;
+    color: #000000 !important;
+    padding: 2px 6px;
+    border-radius: 6px;
 }}
 
 /* CHAT INPUT */
@@ -121,23 +130,10 @@ st.markdown(f"""
     fill: {TEXT_COLOR} !important;
 }}
 
-/* FEEDBACK BOX */
-textarea {{
-    background: {BG_CARD} !important;
-    color: {TEXT_COLOR} !important;
-    border: 1px solid {BORDER} !important;
-}}
-
-button {{
-    background: {BG_CARD} !important;
-    color: {TEXT_COLOR} !important;
-    border: 1px solid {BORDER} !important;
-}}
-
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- TIMEZONE ----------------
+# ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
         res = requests.get("https://ipapi.co/json/").json()
@@ -147,7 +143,7 @@ def get_timezone():
 
 tz = get_timezone()
 
-# ---------------- SMART ANSWER ----------------
+# ---------------- SMART LOGIC ----------------
 def smart_answer(prompt):
     text = prompt.lower().strip()
     now = datetime.now(tz)
@@ -184,18 +180,6 @@ with st.sidebar:
         st.toggle("🌙 Dark Mode", key="dark_mode")
 
     st.divider()
-    st.subheader("🆘 Help & Feedback")
-
-    feedback = st.text_area("Share your feedback or suggestions")
-    if st.button("Send Feedback") and feedback.strip():
-        requests.post(
-            "https://formspree.io/f/xblanbjk",
-            data={"message": feedback},
-            headers={"Accept": "application/json"}
-        )
-        st.success("✅ Feedback sent!")
-
-    st.divider()
     st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
@@ -216,7 +200,13 @@ st.markdown("""
 # ---------------- CHAT HISTORY ----------------
 for m in st.session_state.messages:
     with st.chat_message("user" if isinstance(m, HumanMessage) else "assistant"):
-        st.markdown(m.content)
+        if isinstance(m, AIMessage):
+            st.markdown(
+                f"<div class='assistant-text'>{m.content}</div>",
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(m.content)
 
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
@@ -230,4 +220,7 @@ if prompt:
     with st.chat_message("assistant"):
         answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
         st.session_state.messages.append(AIMessage(content=answer))
-        st.markdown(answer)
+        st.markdown(
+            f"<div class='assistant-text'>{answer}</div>",
+            unsafe_allow_html=True
+        )
