@@ -25,7 +25,7 @@ if st.session_state.dark_mode:
     BG_MAIN = "#0f172a"
     BG_SIDEBAR = "#020617"
     BG_CARD = "#020617"
-    TEXT_COLOR = "#ffffff"
+    TEXT_COLOR = "#ffffff"     # WHITE text in dark mode
     BORDER = "#334155"
     PLACEHOLDER = "#ffffff"
     SEND_BG = "#1e293b"
@@ -33,16 +33,16 @@ else:
     BG_MAIN = "#e6f7ff"
     BG_SIDEBAR = "#d9f0ff"
     BG_CARD = "#ffffff"
-    TEXT_COLOR = "#000000"
+    TEXT_COLOR = "#000000"     # BLACK text in light mode
     BORDER = "#aaccee"
     PLACEHOLDER = "#5b7fa3"
     SEND_BG = "#ffffff"
 
-# ---------------- FINAL UI FIX ----------------
+# ---------------- FINAL UI (ONLY FIXED PART) ----------------
 st.markdown(f"""
 <style>
 
-/* REMOVE STREAMLIT DEFAULT BARS */
+/* REMOVE STREAMLIT TOP/BOTTOM */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {{
     background: transparent !important;
@@ -62,40 +62,35 @@ st.markdown(f"""
     color: {TEXT_COLOR} !important;
 }}
 
-/* CHAT BUBBLES */
-.stChatMessage {{
+/* USER MESSAGE */
+.stChatMessage[data-testid="stChatMessage-user"] {{
     background: {BG_CARD};
     border-radius: 14px;
 }}
-
-/* USER MESSAGE */
 .stChatMessage[data-testid="stChatMessage-user"] * {{
     color: {TEXT_COLOR} !important;
 }}
 
-/* ASSISTANT TEXT FIX (🔥 MOST IMPORTANT 🔥) */
-.assistant-text {{
+/* ASSISTANT MESSAGE */
+.stChatMessage[data-testid="stChatMessage-assistant"] {{
+    background: {BG_CARD};
+    border-radius: 14px;
+}}
+
+/* ✅ FIX: ASSISTANT GENERATED TEXT (DESKTOP + MOBILE) */
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
     color: {TEXT_COLOR} !important;
     opacity: 1 !important;
-    line-height: 1.6;
-    font-size: 16px;
 }}
 
-/* ASSISTANT CODE BLOCKS */
-.assistant-text pre {{
+/* ✅ FIX: CODE BLOCKS ALWAYS BLACK TEXT */
+.stChatMessage[data-testid="stChatMessage-assistant"] pre,
+.stChatMessage[data-testid="stChatMessage-assistant"] code {{
+    color: #000000 !important;
     background: #ffffff !important;
-    color: #000000 !important;
-    padding: 14px !important;
+    opacity: 1 !important;
     border-radius: 12px !important;
-    overflow-x: auto !important;
-}}
-
-/* INLINE CODE */
-.assistant-text code {{
-    background: #f1f5f9 !important;
-    color: #000000 !important;
-    padding: 2px 6px;
-    border-radius: 6px;
 }}
 
 /* CHAT INPUT */
@@ -110,6 +105,7 @@ st.markdown(f"""
 /* PLACEHOLDER */
 [data-testid="stChatInput"] textarea::placeholder {{
     color: {PLACEHOLDER} !important;
+    opacity: 1 !important;
 }}
 
 /* SEND BUTTON */
@@ -130,6 +126,20 @@ st.markdown(f"""
     fill: {TEXT_COLOR} !important;
 }}
 
+/* FEEDBACK BOX */
+textarea {{
+    background: {BG_CARD} !important;
+    color: {TEXT_COLOR} !important;
+    border: 1px solid {BORDER} !important;
+}}
+
+/* BUTTONS */
+button {{
+    background: {BG_CARD} !important;
+    border: 1px solid {BORDER} !important;
+    color: {TEXT_COLOR} !important;
+}}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -148,18 +158,19 @@ def smart_answer(prompt):
     text = prompt.lower().strip()
     now = datetime.now(tz)
 
-    if "creator full name" in text:
+    if "creator full name" in text or "full name of creator" in text:
         return "**Shashank N P**"
-    if "creator" in text:
+    if "creator" in text or "who created" in text or "who made" in text:
         return "**Shashank**"
-    if "your name" in text:
+    if "your name" in text or "what is your name" in text:
         return "**Rossie**"
+
     if "time" in text:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
     if "tomorrow" in text:
         tmr = now + timedelta(days=1)
         return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
-    if "today" in text:
+    if "today" in text or text == "date":
         return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
     return None
@@ -178,6 +189,19 @@ with st.sidebar:
             st.rerun()
     with col2:
         st.toggle("🌙 Dark Mode", key="dark_mode")
+
+    st.divider()
+    st.subheader("🆘 Help & Feedback")
+
+    feedback = st.text_area("Share your feedback or suggestions")
+    if st.button("Send Feedback"):
+        if feedback.strip():
+            requests.post(
+                "https://formspree.io/f/xblanbjk",
+                data={"message": feedback},
+                headers={"Accept": "application/json"}
+            )
+            st.success("✅ Feedback sent!")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -200,13 +224,7 @@ st.markdown("""
 # ---------------- CHAT HISTORY ----------------
 for m in st.session_state.messages:
     with st.chat_message("user" if isinstance(m, HumanMessage) else "assistant"):
-        if isinstance(m, AIMessage):
-            st.markdown(
-                f"<div class='assistant-text'>{m.content}</div>",
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(m.content)
+        st.markdown(m.content)
 
 # ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
@@ -219,8 +237,5 @@ if prompt:
 
     with st.chat_message("assistant"):
         answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
+        st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
-        st.markdown(
-            f"<div class='assistant-text'>{answer}</div>",
-            unsafe_allow_html=True
-        )
