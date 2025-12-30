@@ -26,32 +26,44 @@ if st.session_state.dark_mode:
     BG_SIDEBAR = "#020617"
     BG_CARD = "#020617"
     TEXT_COLOR = "#ffffff"
+    ASSIST_TEXT = "#e5e7eb"
     BORDER = "#334155"
-    PLACEHOLDER = "#cbd5f5"
-    ASSISTANT_TEXT = "#ffffff"
+    PLACEHOLDER = "#ffffff"
+    SEND_BG = "#1e293b"
+    CODE_BG = "#020617"
+    CODE_TEXT = "#e5e7eb"
 else:
     BG_MAIN = "#e6f7ff"
     BG_SIDEBAR = "#d9f0ff"
     BG_CARD = "#ffffff"
     TEXT_COLOR = "#000000"
+    ASSIST_TEXT = "#0f172a"
     BORDER = "#aaccee"
     PLACEHOLDER = "#5b7fa3"
-    ASSISTANT_TEXT = "#000000"
+    SEND_BG = "#ffffff"
+    CODE_BG = "#f8fafc"
+    CODE_TEXT = "#020617"
 
 # ---------------- FINAL UI ----------------
 st.markdown(f"""
 <style>
 
-/* REMOVE HEADER SPACE (MOBILE FIX) */
+/* REMOVE STREAMLIT TOP/BOTTOM */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {{
-    display: none;
+    background: transparent !important;
 }}
 
 /* MAIN */
 .stApp {{
     background: {BG_MAIN};
-    color: {TEXT_COLOR} !important;
+    color: {TEXT_COLOR};
+}}
+
+/* REMOVE MOBILE SIDE SPACE */
+.block-container {{
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
 }}
 
 /* SIDEBAR */
@@ -60,12 +72,6 @@ st.markdown(f"""
 }}
 [data-testid="stSidebar"] * {{
     color: {TEXT_COLOR} !important;
-}}
-
-/* CHAT CONTAINER — REMOVE LEFT GAP (MOBILE) */
-section.main > div {{
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
 }}
 
 /* USER MESSAGE */
@@ -82,19 +88,20 @@ section.main > div {{
     background: {BG_CARD};
     border-radius: 14px;
 }}
-.stChatMessage[data-testid="stChatMessage-assistant"] *:not(pre):not(code) {{
-    color: {ASSISTANT_TEXT} !important;
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
+    color: {ASSIST_TEXT} !important;
     opacity: 1 !important;
 }}
 
 /* CODE BLOCKS */
 .stChatMessage[data-testid="stChatMessage-assistant"] pre {{
-    background: #ffffff !important;
-    color: #000000 !important;
+    background: {CODE_BG} !important;
+    color: {CODE_TEXT} !important;
     border-radius: 12px;
 }}
 .stChatMessage[data-testid="stChatMessage-assistant"] code {{
-    color: #000000 !important;
+    color: {CODE_TEXT} !important;
 }}
 
 /* CHAT INPUT */
@@ -105,24 +112,35 @@ section.main > div {{
     border: 1.5px solid {BORDER};
     padding: 14px 64px 14px 20px;
 }}
+
+/* PLACEHOLDER */
 [data-testid="stChatInput"] textarea::placeholder {{
     color: {PLACEHOLDER} !important;
+    opacity: 1 !important;
 }}
 
 /* SEND BUTTON */
 [data-testid="stChatInput"] button {{
-    background: {BG_CARD};
-    border: 1px solid {BORDER};
-    border-radius: 50%;
+    position: absolute !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    background: {SEND_BG} !important;
+    border: 1px solid {BORDER} !important;
+    border-radius: 50% !important;
+    width: 38px !important;
+    height: 38px !important;
 }}
+
+/* SEND ICON */
 [data-testid="stChatInput"] button svg {{
-    fill: {TEXT_COLOR};
+    fill: {TEXT_COLOR} !important;
 }}
 
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- TIMEZONE ----------------
+# ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
         res = requests.get("https://ipapi.co/json/").json()
@@ -138,16 +156,18 @@ def smart_answer(prompt):
     now = datetime.now(tz)
 
     if "your name" in text:
-        return "**rossie**"
+        return "**Rossie**"
 
-    if "creator" in text or "created" in text or "who made" in text:
+    if "creator" in text or "who created" in text or "creator name" in text:
         return "**Shashank N P**"
 
     if "time" in text:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
+
     if "tomorrow" in text:
         tmr = now + timedelta(days=1)
         return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
+
     if "today" in text or text == "date":
         return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
@@ -169,18 +189,6 @@ with st.sidebar:
         st.toggle("🌙 Dark Mode", key="dark_mode")
 
     st.divider()
-    st.subheader("🆘 Help & Feedback")
-
-    feedback = st.text_area("Share your feedback or suggestions")
-    if st.button("Send Feedback") and feedback.strip():
-        requests.post(
-            "https://formspree.io/f/xblanbjk",
-            data={"message": feedback},
-            headers={"Accept": "application/json"}
-        )
-        st.success("✅ Feedback sent!")
-
-    st.divider()
     st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
@@ -191,13 +199,12 @@ llm = ChatGroq(
 )
 
 # ---------------- HERO ----------------
-if not st.session_state.messages:
-    st.markdown("""
-    <div style="margin-top:30vh;text-align:center;">
-    <h1>💬 NeoMind AI</h1>
-    <p>Ask. Think. Generate.</p>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown("""
+<div style="margin-top:30vh;text-align:center;">
+<h1>💬 NeoMind AI</h1>
+<p>Ask. Think. Generate.</p>
+</div>
+""", unsafe_allow_html=True)
 
 # ---------------- CHAT HISTORY ----------------
 for m in st.session_state.messages:
