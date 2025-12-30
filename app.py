@@ -48,17 +48,19 @@ else:
 st.markdown(f"""
 <style>
 
-/* REMOVE STREAMLIT HEADER */
+/* REMOVE STREAMLIT HEADER/FOOTER */
 [data-testid="stHeader"],
 [data-testid="stBottom"] {{
     display: none;
 }}
 
+/* MAIN */
 .stApp {{
     background: {BG_MAIN};
     color: {TEXT_COLOR};
 }}
 
+/* REMOVE MOBILE SIDE SPACE */
 .block-container {{
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
@@ -84,7 +86,7 @@ st.markdown(f"""
     border-radius: 14px;
 }}
 
-/* ✅ FIXED ASSISTANT TEXT */
+/* FIX ASSISTANT TEXT */
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown p,
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown li,
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown h1,
@@ -128,7 +130,7 @@ st.markdown(f"""
 }}
 
 [data-testid="stChatInput"] button svg {{
-    fill: {TEXT_COLOR};
+    fill: {TEXT_COLOR} !important;
 }}
 
 </style>
@@ -137,7 +139,9 @@ st.markdown(f"""
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
-        return pytz.timezone(requests.get("https://ipapi.co/json/").json().get("timezone"))
+        return pytz.timezone(
+            requests.get("https://ipapi.co/json/").json().get("timezone")
+        )
     except:
         return pytz.UTC
 
@@ -154,6 +158,11 @@ def smart_answer(prompt):
         return "**Shashank N P**"
     if "time" in text:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
+    if "today" in text:
+        return f"📅 **Today:** {now.strftime('%d %B %Y')}"
+    if "tomorrow" in text:
+        return f"📅 **Tomorrow:** {(now + timedelta(days=1)).strftime('%d %B %Y')}"
+
     return None
 
 # ---------------- SIDEBAR ----------------
@@ -193,9 +202,9 @@ llm = ChatGroq(
     temperature=temperature,
 )
 
-# ---------------- HERO ----------------
+# ---------------- HERO (FIXED) ----------------
 st.markdown("""
-<div style="margin-top:30vh;text-align:center;">
+<div style="margin-top:12vh;text-align:center;">
 <h1>💬 NeoMind AI</h1>
 <p>Ask. Think. Generate.</p>
 </div>
