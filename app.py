@@ -73,7 +73,7 @@ st.markdown(f"""
     color: {TEXT_COLOR} !important;
 }}
 
-/* ASSISTANT TEXT FIX */
+/* ASSISTANT TEXT FIX (🔥 MOST IMPORTANT 🔥) */
 .assistant-text {{
     color: {TEXT_COLOR} !important;
     opacity: 1 !important;
@@ -130,13 +130,6 @@ st.markdown(f"""
     fill: {TEXT_COLOR} !important;
 }}
 
-/* FEEDBACK TEXTAREA */
-textarea {{
-    background: {BG_CARD} !important;
-    color: {TEXT_COLOR} !important;
-    border: 1px solid {BORDER} !important;
-}}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -185,19 +178,6 @@ with st.sidebar:
             st.rerun()
     with col2:
         st.toggle("🌙 Dark Mode", key="dark_mode")
-
-    st.divider()
-    st.subheader("🆘 Help & Feedback")
-
-    feedback = st.text_area("Share your feedback or suggestions")
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={"message": feedback},
-                headers={"Accept": "application/json"}
-            )
-            st.success("✅ Feedback sent!")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
