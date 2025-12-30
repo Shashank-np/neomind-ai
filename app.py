@@ -77,22 +77,20 @@ st.markdown(f"""
     border-radius: 14px;
 }}
 
-/* ✅ FINAL FIX — FORCE WHITE TEXT EVERYWHERE (DESKTOP + MOBILE) */
-.stChatMessage[data-testid="stChatMessage-assistant"] *:not(pre):not(code) {{
+/* 🔥 FINAL DESKTOP + MOBILE FIX */
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
+.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
     color: #ffffff !important;
     opacity: 1 !important;
 }}
 
-/* ✅ CODE BLOCKS (UNCHANGED) */
-.stChatMessage[data-testid="stChatMessage-assistant"] pre {{
-    background: #ffffff !important;
-    color: #000000 !important;
-    border-radius: 12px !important;
-}}
-
+/* ❌ EXCLUDE CODE BLOCKS */
+.stChatMessage[data-testid="stChatMessage-assistant"] pre,
 .stChatMessage[data-testid="stChatMessage-assistant"] code {{
     color: #000000 !important;
-    background: transparent !important;
+    background: #ffffff !important;
+    opacity: 1 !important;
+    border-radius: 12px !important;
 }}
 
 /* CHAT INPUT */
