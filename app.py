@@ -73,7 +73,7 @@ st.markdown(f"""
     color: {TEXT_COLOR} !important;
 }}
 
-/* ASSISTANT TEXT */
+/* ASSISTANT TEXT FIX */
 .assistant-text {{
     color: {TEXT_COLOR} !important;
     opacity: 1 !important;
@@ -130,6 +130,13 @@ st.markdown(f"""
     fill: {TEXT_COLOR} !important;
 }}
 
+/* FEEDBACK TEXTAREA */
+textarea {{
+    background: {BG_CARD} !important;
+    color: {TEXT_COLOR} !important;
+    border: 1px solid {BORDER} !important;
+}}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -179,7 +186,6 @@ with st.sidebar:
     with col2:
         st.toggle("🌙 Dark Mode", key="dark_mode")
 
-    # ✅ FEEDBACK BOX ADDED
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
