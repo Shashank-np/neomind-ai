@@ -25,7 +25,7 @@ if st.session_state.dark_mode:
     BG_MAIN = "#0f172a"
     BG_SIDEBAR = "#020617"
     BG_CARD = "#020617"
-    TEXT_COLOR = "#ffffff"     # WHITE text in dark mode
+    TEXT_COLOR = "#ffffff"
     BORDER = "#334155"
     PLACEHOLDER = "#ffffff"
     SEND_BG = "#1e293b"
@@ -33,18 +33,16 @@ else:
     BG_MAIN = "#e6f7ff"
     BG_SIDEBAR = "#d9f0ff"
     BG_CARD = "#ffffff"
-    TEXT_COLOR = "#000000"     # BLACK text in light mode
+    TEXT_COLOR = "#000000"
     BORDER = "#aaccee"
     PLACEHOLDER = "#5b7fa3"
     SEND_BG = "#ffffff"
 
-# ---------------- FINAL UI (ONLY FIXED PART) ----------------
+# ---------------- FINAL UI ----------------
 st.markdown(f"""
 <style>
-
 /* REMOVE STREAMLIT TOP/BOTTOM */
-[data-testid="stHeader"],
-[data-testid="stBottom"] {{
+[data-testid="stHeader"], [data-testid="stBottom"] {{
     background: transparent !important;
 }}
 
@@ -77,19 +75,17 @@ st.markdown(f"""
     border-radius: 14px;
 }}
 
-/* ✅ FIX: ASSISTANT GENERATED TEXT (DESKTOP + MOBILE) */
+/* FIX TEXT COLOR */
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
 .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
     color: {TEXT_COLOR} !important;
-    opacity: 1 !important;
 }}
 
-/* ✅ FIX: CODE BLOCKS ALWAYS BLACK TEXT */
+/* CODE BLOCKS */
 .stChatMessage[data-testid="stChatMessage-assistant"] pre,
 .stChatMessage[data-testid="stChatMessage-assistant"] code {{
     color: #000000 !important;
     background: #ffffff !important;
-    opacity: 1 !important;
     border-radius: 12px !important;
 }}
 
@@ -105,7 +101,6 @@ st.markdown(f"""
 /* PLACEHOLDER */
 [data-testid="stChatInput"] textarea::placeholder {{
     color: {PLACEHOLDER} !important;
-    opacity: 1 !important;
 }}
 
 /* SEND BUTTON */
@@ -126,20 +121,6 @@ st.markdown(f"""
     fill: {TEXT_COLOR} !important;
 }}
 
-/* FEEDBACK BOX */
-textarea {{
-    background: {BG_CARD} !important;
-    color: {TEXT_COLOR} !important;
-    border: 1px solid {BORDER} !important;
-}}
-
-/* BUTTONS */
-button {{
-    background: {BG_CARD} !important;
-    border: 1px solid {BORDER} !important;
-    color: {TEXT_COLOR} !important;
-}}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -156,8 +137,28 @@ tz = get_timezone()
 # ---------------- SMART LOGIC ----------------
 def smart_answer(prompt):
     text = prompt.lower().strip()
-    now = datetime.now(tz)
 
+    # use today() instead of now()
+    now = datetime.today().astimezone(tz)
+
+    # Exact time questions ONLY
+    time_questions = [
+        "time",
+        "what is time",
+        "what's time",
+        "current time",
+        "what is the time",
+        "time?",
+        "time please",
+        "tell time",
+        "show time",
+    ]
+
+    # Check exact match
+    if text in time_questions:
+        return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
+
+    # Other keywords shouldn't trigger time (like time complexity)
     if "creator full name" in text or "full name of creator" in text:
         return "**Shashank N P**"
     if "creator" in text or "who created" in text or "who made" in text:
@@ -165,11 +166,10 @@ def smart_answer(prompt):
     if "your name" in text or "what is your name" in text:
         return "**Rossie**"
 
-    if "time" in text:
-        return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
     if "tomorrow" in text:
         tmr = now + timedelta(days=1)
         return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
+
     if "today" in text or text == "date":
         return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
@@ -232,6 +232,7 @@ prompt = st.chat_input("Ask NeoMind AI anything…")
 # ---------------- CHAT HANDLER ----------------
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
+
     with st.chat_message("user"):
         st.markdown(prompt)
 
