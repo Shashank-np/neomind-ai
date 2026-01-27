@@ -33,64 +33,6 @@ BORDER = "#aaccee"
 PLACEHOLDER = "#5b7fa3"
 SEND_BG = "#ffffff"
 
-# ---------------- CSS ----------------
-# st.markdown(f"""
-# <style>
-# [data-testid="stHeader"], [data-testid="stBottom"] {{
-#     background: transparent !important;
-# }}
-
-# .stApp {{
-#     background: {BG_MAIN};
-#     color: {TEXT_COLOR};
-# }}
-
-# [data-testid="stSidebar"] {{
-#     background: {BG_SIDEBAR};
-# }}
-# [data-testid="stSidebar"] * {{
-#     color: {TEXT_COLOR};
-# }}
-
-# .stChatMessage {{
-#     background: {BG_CARD};
-#     border-radius: 14px;
-# }}
-
-# .stChatMessage * {{
-#     color: {TEXT_COLOR};
-# }}
-
-# [data-testid="stChatInput"] textarea {{
-#     background: {BG_CARD};
-#     color: {TEXT_COLOR};
-#     border-radius: 999px;
-#     border: 1.5px solid {BORDER};
-#     padding: 14px 64px 14px 20px;
-# }}
-
-# [data-testid="stChatInput"] textarea::placeholder {{
-#     color: {PLACEHOLDER};
-# }}
-
-# [data-testid="stChatInput"] button {{
-#     position: absolute;
-#     right: 12px;
-#     top: 50%;
-#     transform: translateY(-50%);
-#     background: {SEND_BG};
-#     border: 1px solid {BORDER};
-#     border-radius: 50%;
-#     width: 38px;
-#     height: 38px;
-# }}
-
-# [data-testid="stChatInput"] button svg {{
-#     fill: {TEXT_COLOR};
-# }}
-# </style>
-# """, unsafe_allow_html=False)
-
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
@@ -192,6 +134,7 @@ if prompt:
         answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
+
 
 
 
