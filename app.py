@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 from datetime import datetime, timedelta
@@ -6,6 +5,9 @@ import pytz
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
+
+from bs4 import BeautifulSoup
+import re
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -39,7 +41,6 @@ else:
     PLACEHOLDER = "#5b7fa3"
     SEND_BG = "#ffffff"
 
-
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
@@ -53,33 +54,22 @@ tz = get_timezone()
 # ---------------- SMART LOGIC ----------------
 def smart_answer(prompt):
     text = prompt.lower().strip()
-
-    # use today() instead of now()
     now = datetime.today().astimezone(tz)
 
-    # Exact time questions ONLY
     time_questions = [
-        "time",
-        "what is time",
-        "what's time",
-        "current time",
-        "what is the time",
-        "time?",
-        "time please",
-        "tell time",
-        "show time",
+        "time", "what is time", "what's time",
+        "current time", "what is the time",
+        "time?", "time please", "tell time", "show time"
     ]
 
-    # Check exact match
     if text in time_questions:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
 
-    # Other keywords shouldn't trigger time (like time complexity)
-    if "creator full name" in text or "full name of creator" in text:
+    if "creator full name" in text:
         return "**Shashank N P**"
-    if "creator" in text or "who created" in text or "who made" in text:
+    if "creator" in text:
         return "**Shashank**"
-    if "your name" in text or "what is your name" in text:
+    if "your name" in text:
         return "**Rossie**"
 
     if "tomorrow" in text:
@@ -90,6 +80,94 @@ def smart_answer(prompt):
         return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
     return None
+
+# ---------------- VIDEO SEARCH ----------------
+def video_suggestion(query):
+    video_keywords = ["video", "youtube", "watch", "explain", "tutorial", "lecture"]
+
+    if not any(k in query.lower() for k in video_keywords):
+        return None
+
+    try:
+        yt_url = "https://www.youtube.com/results"
+        params = {"search_query": query}
+        headers = {"User-Agent": "Mozilla/5.0"}
+
+        res = requests.get(yt_url, params=params, headers=headers)
+        soup = BeautifulSoup(res.text, "html.parser")
+
+        links = []
+        for a in soup.find_all("a"):
+            href = a.get("href", "")
+            if "/watch?v=" in href:
+                link = "https://www.youtube.com" + href
+                if link not in links:
+                    links.append(link)
+            if len(links) == 3:
+                break
+
+        if not links:
+            return None
+
+        reply = "🎥 **Recommended Informative Videos**\n\n"
+        for i, link in enumerate(links, 1):
+            reply += f"{i}. {link}\n"
+
+        return reply
+
+    except:
+        return None
+
+# ---------------- SMART WEB SCRAPING ----------------
+def web_scrape_structured(query):
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        google_url = "https://www.google.com/search"
+        params = {"q": query}
+
+        res = requests.get(google_url, headers=headers, params=params, timeout=5)
+        soup = BeautifulSoup(res.text, "html.parser")
+
+        source_link = None
+        for a in soup.select("a"):
+            href = a.get("href", "")
+            if href.startswith("/url?q="):
+                source_link = href.split("/url?q=")[1].split("&")[0]
+                break
+
+        if not source_link:
+            return None
+
+        page = requests.get(source_link, headers=headers, timeout=5)
+        psoup = BeautifulSoup(page.text, "html.parser")
+
+        title = psoup.title.string.strip() if psoup.title else query.title()
+
+        paragraphs = psoup.find_all("p")
+        points = []
+
+        for p in paragraphs:
+            text = p.get_text().strip()
+            if 50 < len(text) < 200:
+                points.append(text)
+            if len(points) == 6:
+                break
+
+        if not points:
+            return None
+
+        response = f"### **{title}**\n\n"
+        response += "**Overview**\n\n"
+
+        for p in points:
+            response += f"- {p}\n"
+
+        response += f"\n🌐 **Source:** {source_link}"
+
+        return response
+
+    except:
+        return None
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
@@ -153,12 +231,12 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
+        answer = (
+            smart_answer(prompt)
+            or video_suggestion(prompt)
+            or web_scrape_structured(prompt)
+            or llm.invoke(st.session_state.messages).content
+        )
+
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
-
-
-
-
-
-
