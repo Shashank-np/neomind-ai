@@ -2,12 +2,8 @@ import streamlit as st
 import requests
 from datetime import datetime, timedelta
 import pytz
-
-from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, AIMessage
-
-from bs4 import BeautifulSoup
 import wikipedia
+from bs4 import BeautifulSoup
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -110,6 +106,36 @@ Let me know if you want **download links**, **history**, or **visiting informati
     except:
         return None
 
+# ---------------- MOVIE SEARCH ----------------
+def get_movie_info(title):
+    try:
+        page = wikipedia.page(title, auto_suggest=True)
+        summary = wikipedia.summary(page.title, sentences=2)
+
+        title = page.title
+
+        response = f"""
+### **{title}**
+
+🎥 **Movie Info**
+
+{summary}
+
+📺 **Trailer & Reviews**
+
+If you want to watch the trailer or read reviews, explore these trusted links:
+
+🔗 **IMDB:** https://www.imdb.com/title/{page.pageid}/  
+🔗 **Rotten Tomatoes:** https://www.rottentomatoes.com/m/{page.pageid}/  
+🔗 **Wikipedia:** https://en.wikipedia.org/wiki/{title.replace(" ", "_")}
+
+Let me know if you want **more info** or **similar movies** 🙏✨
+"""
+        return response
+
+    except:
+        return None
+
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
@@ -159,6 +185,7 @@ if prompt:
             smart_answer(prompt)
             or image_info_response(prompt)
             or llm.invoke(st.session_state.messages).content
+            or get_movie_info(prompt)
         )
 
         st.markdown(answer)
