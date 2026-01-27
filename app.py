@@ -103,26 +103,26 @@ st.markdown(f"""
     color: {PLACEHOLDER} !important;
 }}
 
-/* SEND BUTTON */
-[data-testid="stChatInput"] button {{
-    position: absolute !important;
-    right: 12px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    background: {SEND_BG} !important;
-    border: 1px solid {BORDER} !important;
-    border-radius: 50% !important;
-    width: 38px !important;
-    height: 38px !important;
-}}
+# /* SEND BUTTON */
+# [data-testid="stChatInput"] button {{
+#     position: absolute !important;
+#     right: 12px !important;
+#     top: 50% !important;
+#     transform: translateY(-50%) !important;
+#     background: {SEND_BG} !important;
+#     border: 1px solid {BORDER} !important;
+#     border-radius: 50% !important;
+#     width: 38px !important;
+#     height: 38px !important;
+# }}
 
 /* SEND ICON */
-[data-testid="stChatInput"] button svg {{
-    fill: {TEXT_COLOR} !important;
-}}
+# [data-testid="stChatInput"] button svg {{
+#     fill: {TEXT_COLOR} !important;
+# }}
 
 </style>
-""", unsafe_allow_html=False)
+""", unsafe_allow_html=True)
 
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
@@ -240,5 +240,6 @@ if prompt:
         answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
+
 
 
