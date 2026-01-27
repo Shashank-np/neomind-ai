@@ -34,7 +34,7 @@ PLACEHOLDER = "#5b7fa3"
 SEND_BG = "#ffffff"
 
 # ---------------- CSS ----------------
-st.markdown(f"""
+# st.markdown(f"""
 <style>
 [data-testid="stHeader"], [data-testid="stBottom"] {{
     background: transparent !important;
@@ -192,4 +192,5 @@ if prompt:
         answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
+
 
