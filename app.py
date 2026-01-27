@@ -24,26 +24,14 @@ Keep responses simple and natural.
 """)
     ]
 
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
-
-# ---------------- THEME COLORS ----------------
-if st.session_state.dark_mode:
-    BG_MAIN = "#0f172a"
-    BG_SIDEBAR = "#020617"
-    BG_CARD = "#020617"
-    TEXT_COLOR = "#ffffff"
-    BORDER = "#334155"
-    PLACEHOLDER = "#cbd5f5"
-    SEND_BG = "#1e293b"
-else:
-    BG_MAIN = "#e6f7ff"
-    BG_SIDEBAR = "#d9f0ff"
-    BG_CARD = "#ffffff"
-    TEXT_COLOR = "#000000"
-    BORDER = "#aaccee"
-    PLACEHOLDER = "#5b7fa3"
-    SEND_BG = "#ffffff"
+# ---------------- FIXED LIGHT THEME COLORS ----------------
+BG_MAIN = "#e6f7ff"
+BG_SIDEBAR = "#f4faff"
+BG_CARD = "#ffffff"
+TEXT_COLOR = "#000000"
+BORDER = "#aaccee"
+PLACEHOLDER = "#5b7fa3"
+SEND_BG = "#ffffff"
 
 # ---------------- CSS ----------------
 st.markdown(f"""
@@ -118,16 +106,10 @@ def smart_answer(prompt):
     text = prompt.lower().strip()
     now = datetime.today().astimezone(tz)
 
-    greetings = ["hi", "hello", "hey", "hai"]
-    if text in greetings:
-        return "Hey 👋 How can I help you?"
+    if text in ["hi", "hello", "hey", "hai"]:
+        return "Hey 👋 How can I help you today?"
 
-    time_questions = [
-        "time", "what is time", "what's time",
-        "current time", "what is the time"
-    ]
-
-    if text in time_questions:
+    if text in ["time", "what is time", "what's time", "current time", "what is the time"]:
         return f"⏰ **{now.strftime('%I:%M %p')}**"
 
     if "your name" in text:
@@ -155,18 +137,14 @@ with st.sidebar:
 
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🧹 Clear Chat"):
-            st.session_state.messages = st.session_state.messages[:1]
-            st.rerun()
-    with col2:
-        st.toggle("🌙 Dark Mode", key="dark_mode")
+    if st.button("🧹 Clear Chat"):
+        st.session_state.messages = st.session_state.messages[:1]
+        st.rerun()
 
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
-    feedback = st.text_area("Share your feedback")
+    feedback = st.text_area("Share your feedback or suggestions")
     if st.button("Send Feedback"):
         if feedback.strip():
             requests.post(
