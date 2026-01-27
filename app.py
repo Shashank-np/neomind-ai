@@ -39,90 +39,90 @@ else:
     SEND_BG = "#ffffff"
 
 # ---------------- FINAL UI ----------------
-st.markdown(f"""
-<style>
-/* REMOVE STREAMLIT TOP/BOTTOM */
-[data-testid="stHeader"], [data-testid="stBottom"] {{
-    background: transparent !important;
-}}
+# st.markdown(f"""
+# <style>
+# /* REMOVE STREAMLIT TOP/BOTTOM */
+# [data-testid="stHeader"], [data-testid="stBottom"] {{
+#     background: transparent !important;
+# }}
 
-/* MAIN BACKGROUND */
-.stApp {{
-    background: {BG_MAIN};
-    color: {TEXT_COLOR} !important;
-}}
+# /* MAIN BACKGROUND */
+# .stApp {{
+#     background: {BG_MAIN};
+#     color: {TEXT_COLOR} !important;
+# }}
 
-/* SIDEBAR */
-[data-testid="stSidebar"] {{
-    background: {BG_SIDEBAR};
-}}
-[data-testid="stSidebar"] * {{
-    color: {TEXT_COLOR} !important;
-}}
+# /* SIDEBAR */
+# [data-testid="stSidebar"] {{
+#     background: {BG_SIDEBAR};
+# }}
+# [data-testid="stSidebar"] * {{
+#     color: {TEXT_COLOR} !important;
+# }}
 
-/* USER MESSAGE */
-.stChatMessage[data-testid="stChatMessage-user"] {{
-    background: {BG_CARD};
-    border-radius: 14px;
-}}
-.stChatMessage[data-testid="stChatMessage-user"] * {{
-    color: {TEXT_COLOR} !important;
-}}
+# /* USER MESSAGE */
+# .stChatMessage[data-testid="stChatMessage-user"] {{
+#     background: {BG_CARD};
+#     border-radius: 14px;
+# }}
+# .stChatMessage[data-testid="stChatMessage-user"] * {{
+#     color: {TEXT_COLOR} !important;
+# }}
 
-/* ASSISTANT MESSAGE */
-.stChatMessage[data-testid="stChatMessage-assistant"] {{
-    background: {BG_CARD};
-    border-radius: 14px;
-}}
+# /* ASSISTANT MESSAGE */
+# .stChatMessage[data-testid="stChatMessage-assistant"] {{
+#     background: {BG_CARD};
+#     border-radius: 14px;
+# }}
 
-/* FIX TEXT COLOR */
-.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
-.stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
-    color: {TEXT_COLOR} !important;
-}}
+# /* FIX TEXT COLOR */
+# .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
+# .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
+#     color: {TEXT_COLOR} !important;
+# }}
 
-/* CODE BLOCKS */
-.stChatMessage[data-testid="stChatMessage-assistant"] pre,
-.stChatMessage[data-testid="stChatMessage-assistant"] code {{
-    color: #000000 !important;
-    background: #ffffff !important;
-    border-radius: 12px !important;
-}}
+# /* CODE BLOCKS */
+# .stChatMessage[data-testid="stChatMessage-assistant"] pre,
+# .stChatMessage[data-testid="stChatMessage-assistant"] code {{
+#     color: #000000 !important;
+#     background: #ffffff !important;
+#     border-radius: 12px !important;
+# }}
 
-/* CHAT INPUT */
-[data-testid="stChatInput"] textarea {{
-    background: {BG_CARD};
-    color: {TEXT_COLOR};
-    border-radius: 999px;
-    border: 1.5px solid {BORDER};
-    padding: 14px 64px 14px 20px;
-}}
+# /* CHAT INPUT */
+# [data-testid="stChatInput"] textarea {{
+#     background: {BG_CARD};
+#     color: {TEXT_COLOR};
+#     border-radius: 999px;
+#     border: 1.5px solid {BORDER};
+#     padding: 14px 64px 14px 20px;
+# }}
 
-/* PLACEHOLDER */
-[data-testid="stChatInput"] textarea::placeholder {{
-    color: {PLACEHOLDER} !important;
-}}
+# /* PLACEHOLDER */
+# [data-testid="stChatInput"] textarea::placeholder {{
+#     color: {PLACEHOLDER} !important;
+# }}
 
-/* SEND BUTTON */
-[data-testid="stChatInput"] button {{
-    position: absolute !important;
-    right: 12px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    background: {SEND_BG} !important;
-    border: 1px solid {BORDER} !important;
-    border-radius: 50% !important;
-    width: 38px !important;
-    height: 38px !important;
-}}
+# /* SEND BUTTON */
+# [data-testid="stChatInput"] button {{
+#     position: absolute !important;
+#     right: 12px !important;
+#     top: 50% !important;
+#     transform: translateY(-50%) !important;
+#     background: {SEND_BG} !important;
+#     border: 1px solid {BORDER} !important;
+#     border-radius: 50% !important;
+#     width: 38px !important;
+#     height: 38px !important;
+# }}
 
-/* SEND ICON */
-[data-testid="stChatInput"] button svg {{
-    fill: {TEXT_COLOR} !important;
-}}
+# /* SEND ICON */
+# [data-testid="stChatInput"] button svg {{
+#     fill: {TEXT_COLOR} !important;
+# }}
 
-</style>
-""", unsafe_allow_html=False)
+# </style>
+# """, unsafe_allow_html=False)
 
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
@@ -240,6 +240,7 @@ if prompt:
         answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
+
 
 
 
