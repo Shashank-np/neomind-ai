@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import pytz
 
 from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -15,7 +15,14 @@ st.set_page_config(
 
 # ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = [
+        SystemMessage(content="""
+You are NeoMind AI.
+You talk like a friendly human.
+You NEVER say you are a language model.
+Keep responses simple and natural.
+""")
+    ]
 
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = False
@@ -27,7 +34,7 @@ if st.session_state.dark_mode:
     BG_CARD = "#020617"
     TEXT_COLOR = "#ffffff"
     BORDER = "#334155"
-    PLACEHOLDER = "#ffffff"
+    PLACEHOLDER = "#cbd5f5"
     SEND_BG = "#1e293b"
 else:
     BG_MAIN = "#e6f7ff"
@@ -38,91 +45,63 @@ else:
     PLACEHOLDER = "#5b7fa3"
     SEND_BG = "#ffffff"
 
-# ---------------- FINAL UI ----------------
-# st.markdown(f"""
-# <style>
-# /* REMOVE STREAMLIT TOP/BOTTOM */
-# [data-testid="stHeader"], [data-testid="stBottom"] {{
-#     background: transparent !important;
-# }}
+# ---------------- CSS ----------------
+st.markdown(f"""
+<style>
+[data-testid="stHeader"], [data-testid="stBottom"] {{
+    background: transparent !important;
+}}
 
-# /* MAIN BACKGROUND */
-# .stApp {{
-#     background: {BG_MAIN};
-#     color: {TEXT_COLOR} !important;
-# }}
+.stApp {{
+    background: {BG_MAIN};
+    color: {TEXT_COLOR};
+}}
 
-# /* SIDEBAR */
-# [data-testid="stSidebar"] {{
-#     background: {BG_SIDEBAR};
-# }}
-# [data-testid="stSidebar"] * {{
-#     color: {TEXT_COLOR} !important;
-# }}
+[data-testid="stSidebar"] {{
+    background: {BG_SIDEBAR};
+}}
+[data-testid="stSidebar"] * {{
+    color: {TEXT_COLOR};
+}}
 
-# /* USER MESSAGE */
-# .stChatMessage[data-testid="stChatMessage-user"] {{
-#     background: {BG_CARD};
-#     border-radius: 14px;
-# }}
-# .stChatMessage[data-testid="stChatMessage-user"] * {{
-#     color: {TEXT_COLOR} !important;
-# }}
+.stChatMessage {{
+    background: {BG_CARD};
+    border-radius: 14px;
+}}
 
-# /* ASSISTANT MESSAGE */
-# .stChatMessage[data-testid="stChatMessage-assistant"] {{
-#     background: {BG_CARD};
-#     border-radius: 14px;
-# }}
+.stChatMessage * {{
+    color: {TEXT_COLOR};
+}}
 
-# /* FIX TEXT COLOR */
-# .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown,
-# .stChatMessage[data-testid="stChatMessage-assistant"] .stMarkdown * {{
-#     color: {TEXT_COLOR} !important;
-# }}
+[data-testid="stChatInput"] textarea {{
+    background: {BG_CARD};
+    color: {TEXT_COLOR};
+    border-radius: 999px;
+    border: 1.5px solid {BORDER};
+    padding: 14px 64px 14px 20px;
+}}
 
-# /* CODE BLOCKS */
-# .stChatMessage[data-testid="stChatMessage-assistant"] pre,
-# .stChatMessage[data-testid="stChatMessage-assistant"] code {{
-#     color: #000000 !important;
-#     background: #ffffff !important;
-#     border-radius: 12px !important;
-# }}
+[data-testid="stChatInput"] textarea::placeholder {{
+    color: {PLACEHOLDER};
+}}
 
-# /* CHAT INPUT */
-# [data-testid="stChatInput"] textarea {{
-#     background: {BG_CARD};
-#     color: {TEXT_COLOR};
-#     border-radius: 999px;
-#     border: 1.5px solid {BORDER};
-#     padding: 14px 64px 14px 20px;
-# }}
+[data-testid="stChatInput"] button {{
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: {SEND_BG};
+    border: 1px solid {BORDER};
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+}}
 
-# /* PLACEHOLDER */
-# [data-testid="stChatInput"] textarea::placeholder {{
-#     color: {PLACEHOLDER} !important;
-# }}
-
-# /* SEND BUTTON */
-# [data-testid="stChatInput"] button {{
-#     position: absolute !important;
-#     right: 12px !important;
-#     top: 50% !important;
-#     transform: translateY(-50%) !important;
-#     background: {SEND_BG} !important;
-#     border: 1px solid {BORDER} !important;
-#     border-radius: 50% !important;
-#     width: 38px !important;
-#     height: 38px !important;
-# }}
-
-# /* SEND ICON */
-# [data-testid="stChatInput"] button svg {{
-#     fill: {TEXT_COLOR} !important;
-# }}
-
-# </style>
-# """, unsafe_allow_html=False)
+[data-testid="stChatInput"] button svg {{
+    fill: {TEXT_COLOR};
+}}
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
@@ -137,41 +116,35 @@ tz = get_timezone()
 # ---------------- SMART LOGIC ----------------
 def smart_answer(prompt):
     text = prompt.lower().strip()
-
-    # use today() instead of now()
     now = datetime.today().astimezone(tz)
 
-    # Exact time questions ONLY
+    greetings = ["hi", "hello", "hey", "hai"]
+    if text in greetings:
+        return "Hey 👋 How can I help you?"
+
     time_questions = [
-        "time",
-        "what is time",
-        "what's time",
-        "current time",
-        "what is the time",
-        "time?",
-        "time please",
-        "tell time",
-        "show time",
+        "time", "what is time", "what's time",
+        "current time", "what is the time"
     ]
 
-    # Check exact match
     if text in time_questions:
-        return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
+        return f"⏰ **{now.strftime('%I:%M %p')}**"
 
-    # Other keywords shouldn't trigger time (like time complexity)
-    if "creator full name" in text or "full name of creator" in text:
+    if "your name" in text:
+        return "I’m **NeoMind AI** 🙂"
+
+    if "creator full name" in text:
         return "**Shashank N P**"
-    if "creator" in text or "who created" in text or "who made" in text:
+
+    if "creator" in text:
         return "**Shashank**"
-    if "your name" in text or "what is your name" in text:
-        return "**Rossie**"
 
     if "tomorrow" in text:
         tmr = now + timedelta(days=1)
-        return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
+        return f"📅 **{tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})**"
 
-    if "today" in text or text == "date":
-        return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
+    if text == "today" or text == "date":
+        return f"📅 **{now.strftime('%d %B %Y')} ({now.strftime('%A')})**"
 
     return None
 
@@ -185,7 +158,7 @@ with st.sidebar:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🧹 Clear Chat"):
-            st.session_state.messages = []
+            st.session_state.messages = st.session_state.messages[:1]
             st.rerun()
     with col2:
         st.toggle("🌙 Dark Mode", key="dark_mode")
@@ -193,7 +166,7 @@ with st.sidebar:
     st.divider()
     st.subheader("🆘 Help & Feedback")
 
-    feedback = st.text_area("Share your feedback or suggestions")
+    feedback = st.text_area("Share your feedback")
     if st.button("Send Feedback"):
         if feedback.strip():
             requests.post(
@@ -214,15 +187,16 @@ llm = ChatGroq(
 )
 
 # ---------------- HERO ----------------
-st.markdown("""
-<div style="margin-top:30vh;text-align:center;">
-<h1>💬 NeoMind AI</h1>
-<p>Ask. Think. Generate.</p>
-</div>
-""", unsafe_allow_html=True)
+if len(st.session_state.messages) == 1:
+    st.markdown("""
+    <div style="margin-top:30vh;text-align:center;">
+        <h1>💬 NeoMind AI</h1>
+        <p>Ask. Think. Generate.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ---------------- CHAT HISTORY ----------------
-for m in st.session_state.messages:
+for m in st.session_state.messages[1:]:
     with st.chat_message("user" if isinstance(m, HumanMessage) else "assistant"):
         st.markdown(m.content)
 
@@ -240,9 +214,3 @@ if prompt:
         answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
-
-
-
-
-
-
