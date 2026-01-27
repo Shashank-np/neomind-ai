@@ -7,7 +7,8 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 
 from bs4 import BeautifulSoup
-import re
+import wikipedia
+from newspaper import Article
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -56,116 +57,65 @@ def smart_answer(prompt):
     text = prompt.lower().strip()
     now = datetime.today().astimezone(tz)
 
-    time_questions = [
-        "time", "what is time", "what's time",
-        "current time", "what is the time",
-        "time?", "time please", "tell time", "show time"
-    ]
-
-    if text in time_questions:
+    if text in ["time", "current time", "what is the time"]:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
 
-    if "creator full name" in text:
-        return "**Shashank N P**"
-    if "creator" in text:
-        return "**Shashank**"
-    if "your name" in text:
-        return "**Rossie**"
-
-    if "tomorrow" in text:
-        tmr = now + timedelta(days=1)
-        return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
-
-    if "today" in text or text == "date":
+    if "today" in text:
         return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
+
+    if "creator" in text:
+        return "**Shashank N P**"
 
     return None
 
-# ---------------- VIDEO SEARCH ----------------
-def video_suggestion(query):
-    video_keywords = ["video", "youtube", "watch", "explain", "tutorial", "lecture"]
-
-    if not any(k in query.lower() for k in video_keywords):
-        return None
-
+# ---------------- STRONG WIKIPEDIA SCRAPER ----------------
+def scrape_wikipedia(query):
     try:
-        yt_url = "https://www.youtube.com/results"
-        params = {"search_query": query}
-        headers = {"User-Agent": "Mozilla/5.0"}
+        wikipedia.set_lang("en")
+        page = wikipedia.page(query, auto_suggest=True)
 
-        res = requests.get(yt_url, params=params, headers=headers)
-        soup = BeautifulSoup(res.text, "html.parser")
+        summary = wikipedia.summary(query, sentences=5)
 
-        links = []
-        for a in soup.find_all("a"):
-            href = a.get("href", "")
-            if "/watch?v=" in href:
-                link = "https://www.youtube.com" + href
-                if link not in links:
-                    links.append(link)
-            if len(links) == 3:
-                break
+        result = f"""
+### **{page.title}**
 
-        if not links:
-            return None
+{summary}
 
-        reply = "🎥 **Recommended Informative Videos**\n\n"
-        for i, link in enumerate(links, 1):
-            reply += f"{i}. {link}\n"
-
-        return reply
-
+🔗 **Wikipedia:** {page.url}
+"""
+        return result
     except:
         return None
 
-# ---------------- SMART WEB SCRAPING ----------------
-def web_scrape_structured(query):
+# ---------------- ARTICLE SCRAPER ----------------
+def scrape_article(query):
     try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        google_url = "https://www.google.com/search"
+        search_url = "https://duckduckgo.com/html/"
         params = {"q": query}
+        headers = {"User-Agent": "Mozilla/5.0"}
 
-        res = requests.get(google_url, headers=headers, params=params, timeout=5)
+        res = requests.post(search_url, data=params, headers=headers)
         soup = BeautifulSoup(res.text, "html.parser")
 
-        source_link = None
-        for a in soup.select("a"):
-            href = a.get("href", "")
-            if href.startswith("/url?q="):
-                source_link = href.split("/url?q=")[1].split("&")[0]
-                break
-
-        if not source_link:
+        link = soup.find("a", class_="result__a")
+        if not link:
             return None
 
-        page = requests.get(source_link, headers=headers, timeout=5)
-        psoup = BeautifulSoup(page.text, "html.parser")
+        url = link["href"]
 
-        title = psoup.title.string.strip() if psoup.title else query.title()
+        article = Article(url)
+        article.download()
+        article.parse()
 
-        paragraphs = psoup.find_all("p")
-        points = []
+        text = article.text[:1200]
 
-        for p in paragraphs:
-            text = p.get_text().strip()
-            if 50 < len(text) < 200:
-                points.append(text)
-            if len(points) == 6:
-                break
+        return f"""
+### **{article.title}**
 
-        if not points:
-            return None
+{text}
 
-        response = f"### **{title}**\n\n"
-        response += "**Overview**\n\n"
-
-        for p in points:
-            response += f"- {p}\n"
-
-        response += f"\n🌐 **Source:** {source_link}"
-
-        return response
-
+🌐 **Source:** {url}
+"""
     except:
         return None
 
@@ -176,26 +126,9 @@ with st.sidebar:
 
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🧹 Clear Chat"):
-            st.session_state.messages = []
-            st.rerun()
-    with col2:
-        st.toggle("🌙 Dark Mode", key="dark_mode")
-
-    st.divider()
-    st.subheader("🆘 Help & Feedback")
-
-    feedback = st.text_area("Share your feedback or suggestions")
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={"message": feedback},
-                headers={"Accept": "application/json"}
-            )
-            st.success("✅ Feedback sent!")
+    if st.button("🧹 Clear Chat"):
+        st.session_state.messages = []
+        st.rerun()
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -233,8 +166,8 @@ if prompt:
     with st.chat_message("assistant"):
         answer = (
             smart_answer(prompt)
-            or video_suggestion(prompt)
-            or web_scrape_structured(prompt)
+            or scrape_wikipedia(prompt)
+            or scrape_article(prompt)
             or llm.invoke(st.session_state.messages).content
         )
 
