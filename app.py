@@ -89,7 +89,7 @@ st.markdown(f"""
     fill: {TEXT_COLOR};
 }}
 </style>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=False)
 
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
@@ -192,3 +192,4 @@ if prompt:
         answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
+
