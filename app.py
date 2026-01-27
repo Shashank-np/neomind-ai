@@ -1,10 +1,11 @@
+
 import streamlit as st
 import requests
 from datetime import datetime, timedelta
 import pytz
 
 from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import HumanMessage, AIMessage
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -15,23 +16,29 @@ st.set_page_config(
 
 # ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
-    st.session_state.messages = [
-        SystemMessage(content="""
-You are NeoMind AI.
-You talk like a friendly human.
-You NEVER say you are a language model.
-Keep responses simple and natural.
-""")
-    ]
+    st.session_state.messages = []
 
-# ---------------- FIXED LIGHT THEME COLORS ----------------
-BG_MAIN = "#e6f7ff"
-BG_SIDEBAR = "#f4faff"
-BG_CARD = "#ffffff"
-TEXT_COLOR = "#000000"
-BORDER = "#aaccee"
-PLACEHOLDER = "#5b7fa3"
-SEND_BG = "#ffffff"
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+
+# ---------------- THEME COLORS ----------------
+if st.session_state.dark_mode:
+    BG_MAIN = "#0f172a"
+    BG_SIDEBAR = "#020617"
+    BG_CARD = "#020617"
+    TEXT_COLOR = "#ffffff"
+    BORDER = "#334155"
+    PLACEHOLDER = "#ffffff"
+    SEND_BG = "#1e293b"
+else:
+    BG_MAIN = "#e6f7ff"
+    BG_SIDEBAR = "#d9f0ff"
+    BG_CARD = "#ffffff"
+    TEXT_COLOR = "#000000"
+    BORDER = "#aaccee"
+    PLACEHOLDER = "#5b7fa3"
+    SEND_BG = "#ffffff"
+
 
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
@@ -46,29 +53,41 @@ tz = get_timezone()
 # ---------------- SMART LOGIC ----------------
 def smart_answer(prompt):
     text = prompt.lower().strip()
+
+    # use today() instead of now()
     now = datetime.today().astimezone(tz)
 
-    if text in ["hi", "hello", "hey", "hai"]:
-        return "Hey 👋 How can I help you today?"
+    # Exact time questions ONLY
+    time_questions = [
+        "time",
+        "what is time",
+        "what's time",
+        "current time",
+        "what is the time",
+        "time?",
+        "time please",
+        "tell time",
+        "show time",
+    ]
 
-    if text in ["time", "what is time", "what's time", "current time", "what is the time"]:
-        return f"⏰ **{now.strftime('%I:%M %p')}**"
+    # Check exact match
+    if text in time_questions:
+        return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
 
-    if "your name" in text:
-        return "I’m **NeoMind AI** 🙂"
-
-    if "creator full name" in text:
+    # Other keywords shouldn't trigger time (like time complexity)
+    if "creator full name" in text or "full name of creator" in text:
         return "**Shashank N P**"
-
-    if "creator" in text:
+    if "creator" in text or "who created" in text or "who made" in text:
         return "**Shashank**"
+    if "your name" in text or "what is your name" in text:
+        return "**Rossie**"
 
     if "tomorrow" in text:
         tmr = now + timedelta(days=1)
-        return f"📅 **{tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})**"
+        return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
 
-    if text == "today" or text == "date":
-        return f"📅 **{now.strftime('%d %B %Y')} ({now.strftime('%A')})**"
+    if "today" in text or text == "date":
+        return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
     return None
 
@@ -79,9 +98,13 @@ with st.sidebar:
 
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    if st.button("🧹 Clear Chat"):
-        st.session_state.messages = st.session_state.messages[:1]
-        st.rerun()
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🧹 Clear Chat"):
+            st.session_state.messages = []
+            st.rerun()
+    with col2:
+        st.toggle("🌙 Dark Mode", key="dark_mode")
 
     st.divider()
     st.subheader("🆘 Help & Feedback")
@@ -107,16 +130,15 @@ llm = ChatGroq(
 )
 
 # ---------------- HERO ----------------
-if len(st.session_state.messages) == 1:
-    st.markdown("""
-    <div style="margin-top:30vh;text-align:center;">
-        <h1>💬 NeoMind AI</h1>
-        <p>Ask. Think. Generate.</p>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown("""
+<div style="margin-top:30vh;text-align:center;">
+<h1>💬 NeoMind AI</h1>
+<p>Ask. Think. Generate.</p>
+</div>
+""", unsafe_allow_html=True)
 
 # ---------------- CHAT HISTORY ----------------
-for m in st.session_state.messages[1:]:
+for m in st.session_state.messages:
     with st.chat_message("user" if isinstance(m, HumanMessage) else "assistant"):
         st.markdown(m.content)
 
@@ -134,6 +156,8 @@ if prompt:
         answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
+
+
 
 
 
