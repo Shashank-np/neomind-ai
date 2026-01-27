@@ -8,7 +8,6 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 from bs4 import BeautifulSoup
 import wikipedia
-from newspaper import Article
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -63,59 +62,51 @@ def smart_answer(prompt):
     if "today" in text:
         return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
-    if "creator" in text:
-        return "**Shashank N P**"
-
     return None
 
-# ---------------- STRONG WIKIPEDIA SCRAPER ----------------
-def scrape_wikipedia(query):
+# ---------------- IMAGE INTENT DETECTOR ----------------
+def is_image_request(query):
+    keywords = ["image", "photo", "pictures", "wallpaper", "pics"]
+    return any(k in query.lower() for k in keywords)
+
+# ---------------- STRUCTURED IMAGE RESPONSE ----------------
+def image_info_response(query):
+    if not is_image_request(query):
+        return None
+
     try:
         wikipedia.set_lang("en")
-        page = wikipedia.page(query, auto_suggest=True)
+        page = wikipedia.page(query.replace("image", "").strip(), auto_suggest=True)
+        summary = wikipedia.summary(page.title, sentences=2)
 
-        summary = wikipedia.summary(query, sentences=5)
+        title = page.title
 
-        result = f"""
-### **{page.title}**
+        response = f"""
+### **{title}**
+
+Here are some images of **{title}** — sourced from trusted public image galleries and references.
 
 {summary}
 
-🔗 **Wikipedia:** {page.url}
+📌 **Quick Info (so you know what the images represent)**
+
+- **{title}** is a well-known historical and cultural landmark.
+- The images show important architectural views and surroundings.
+- These visuals are commonly used for educational and devotional purposes.
+
+📸 **More photos & wallpapers**
+
+If you want different angles or high-resolution wallpapers, explore these trusted galleries:
+
+🔗 **Wikipedia Media:** https://commons.wikimedia.org/wiki/{title.replace(" ", "_")}  
+🔗 **Pinterest HD Images:** https://www.pinterest.com/search/pins/?q={title.replace(" ", "%20")}  
+🔗 **Getty Images:** https://www.gettyimages.com/photos/{title.replace(" ", "-")}  
+🔗 **Adobe Stock:** https://stock.adobe.com/search?k={title.replace(" ", "+")}
+
+Let me know if you want **download links**, **history**, or **visiting information** 🙏✨
 """
-        return result
-    except:
-        return None
+        return response
 
-# ---------------- ARTICLE SCRAPER ----------------
-def scrape_article(query):
-    try:
-        search_url = "https://duckduckgo.com/html/"
-        params = {"q": query}
-        headers = {"User-Agent": "Mozilla/5.0"}
-
-        res = requests.post(search_url, data=params, headers=headers)
-        soup = BeautifulSoup(res.text, "html.parser")
-
-        link = soup.find("a", class_="result__a")
-        if not link:
-            return None
-
-        url = link["href"]
-
-        article = Article(url)
-        article.download()
-        article.parse()
-
-        text = article.text[:1200]
-
-        return f"""
-### **{article.title}**
-
-{text}
-
-🌐 **Source:** {url}
-"""
     except:
         return None
 
@@ -166,8 +157,7 @@ if prompt:
     with st.chat_message("assistant"):
         answer = (
             smart_answer(prompt)
-            or scrape_wikipedia(prompt)
-            or scrape_article(prompt)
+            or image_info_response(prompt)
             or llm.invoke(st.session_state.messages).content
         )
 
