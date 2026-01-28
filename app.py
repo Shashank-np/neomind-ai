@@ -5,6 +5,9 @@ import pytz
 import wikipedia
 from bs4 import BeautifulSoup
 
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage, AIMessage
+
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="NeoMind AI",
@@ -19,35 +22,17 @@ if "messages" not in st.session_state:
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = False
 
-# ---------------- THEME COLORS ----------------
-if st.session_state.dark_mode:
-    BG_MAIN = "#0f172a"
-    BG_SIDEBAR = "#020617"
-    BG_CARD = "#020617"
-    TEXT_COLOR = "#ffffff"
-    BORDER = "#334155"
-    PLACEHOLDER = "#ffffff"
-    SEND_BG = "#1e293b"
-else:
-    BG_MAIN = "#e6f7ff"
-    BG_SIDEBAR = "#d9f0ff"
-    BG_CARD = "#ffffff"
-    TEXT_COLOR = "#000000"
-    BORDER = "#aaccee"
-    PLACEHOLDER = "#5b7fa3"
-    SEND_BG = "#ffffff"
-
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
-        res = requests.get("https://ipapi.co/json/").json()
+        res = requests.get("https://ipapi.co/json/", timeout=5).json()
         return pytz.timezone(res.get("timezone", "UTC"))
     except:
         return pytz.UTC
 
 tz = get_timezone()
 
-# ---------------- SMART LOGIC ----------------
+# ---------------- SMART ANSWERS ----------------
 def smart_answer(prompt):
     text = prompt.lower().strip()
     now = datetime.today().astimezone(tz)
@@ -60,95 +45,58 @@ def smart_answer(prompt):
 
     return None
 
-# ---------------- IMAGE INTENT DETECTOR ----------------
-def is_image_request(query):
-    keywords = ["image", "photo", "pictures", "wallpaper", "pics"]
-    return any(k in query.lower() for k in keywords)
-
-# ---------------- STRUCTURED IMAGE RESPONSE ----------------
-def image_info_response(query):
-    if not is_image_request(query):
-        return None
-
+# ---------------- WEB SCRAPING (SAFE) ----------------
+def web_scrape_summary(query):
     try:
-        wikipedia.set_lang("en")
-        page = wikipedia.page(query.replace("image", "").strip(), auto_suggest=True)
-        summary = wikipedia.summary(page.title, sentences=2)
+        search_url = f"https://www.google.com/search?q={query}"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        res = requests.get(search_url, headers=headers, timeout=5)
 
-        title = page.title
+        soup = BeautifulSoup(res.text, "html.parser")
+        snippet = soup.find("div", class_="BNeawe s3v9rd AP7Wnd")
 
-        response = f"""
-### **{title}**
-
-Here are some images of **{title}** — sourced from trusted public image galleries and references.
-
-{summary}
-
-📌 **Quick Info (so you know what the images represent)**
-
-- **{title}** is a well-known historical and cultural landmark.
-- The images show important architectural views and surroundings.
-- These visuals are commonly used for educational and devotional purposes.
-
-📸 **More photos & wallpapers**
-
-If you want different angles or high-resolution wallpapers, explore these trusted galleries:
-
-🔗 **Wikipedia Media:** https://commons.wikimedia.org/wiki/{title.replace(" ", "_")}  
-🔗 **Pinterest HD Images:** https://www.pinterest.com/search/pins/?q={title.replace(" ", "%20")}  
-🔗 **Getty Images:** https://www.gettyimages.com/photos/{title.replace(" ", "-")}  
-🔗 **Adobe Stock:** https://stock.adobe.com/search?k={title.replace(" ", "+")}
-
-Let me know if you want **download links**, **history**, or **visiting information** 🙏✨
-"""
-        return response
+        if snippet:
+            return f"🌐 **From the web:**\n\n{snippet.text}"
 
     except:
         return None
 
-# ---------------- MOVIE SEARCH ----------------
-def get_movie_info(title):
+    return None
+
+# ---------------- IMAGE + WIKI ----------------
+def image_info_response(query):
+    if "image" not in query.lower():
+        return None
+
     try:
-        page = wikipedia.page(title, auto_suggest=True)
+        topic = query.replace("image", "").strip()
+        wikipedia.set_lang("en")
+
+        page = wikipedia.page(topic, auto_suggest=True)
         summary = wikipedia.summary(page.title, sentences=2)
 
-        title = page.title
-
-        response = f"""
-### **{title}**
-
-🎥 **Movie Info**
+        return f"""
+### 🖼️ **{page.title}**
 
 {summary}
 
-📺 **Trailer & Reviews**
-
-If you want to watch the trailer or read reviews, explore these trusted links:
-
-🔗 **IMDB:** https://www.imdb.com/title/{page.pageid}/  
-🔗 **Rotten Tomatoes:** https://www.rottentomatoes.com/m/{page.pageid}/  
-🔗 **Wikipedia:** https://en.wikipedia.org/wiki/{title.replace(" ", "_")}
-
-Let me know if you want **more info** or **similar movies** 🙏✨
+🔗 https://commons.wikimedia.org/wiki/{page.title.replace(" ", "_")}
 """
-        return response
-
+    except wikipedia.DisambiguationError:
+        return "⚠️ Multiple results found. Please be specific."
+    except wikipedia.PageError:
+        return "❌ No page found."
     except:
         return None
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
-    st.caption("Text-based AI Assistant")
-
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.rerun()
-
-    st.divider()
-    st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
 llm = ChatGroq(
@@ -157,20 +105,14 @@ llm = ChatGroq(
     temperature=temperature,
 )
 
-# ---------------- HERO ----------------
-st.markdown("""
-<div style="margin-top:30vh;text-align:center;">
-<h1>💬 NeoMind AI</h1>
-<p>Ask. Think. Generate.</p>
-</div>
-""", unsafe_allow_html=True)
+# ---------------- UI ----------------
+st.markdown("<h1 style='text-align:center'>💬 NeoMind AI</h1>", unsafe_allow_html=True)
 
-# ---------------- CHAT HISTORY ----------------
-for m in st.session_state.messages:
-    with st.chat_message("user" if isinstance(m, HumanMessage) else "assistant"):
-        st.markdown(m.content)
+for msg in st.session_state.messages:
+    role = "user" if isinstance(msg, HumanMessage) else "assistant"
+    with st.chat_message(role):
+        st.markdown(msg.content)
 
-# ---------------- INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 # ---------------- CHAT HANDLER ----------------
@@ -181,13 +123,16 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        answer = (
-            smart_answer(prompt)
-            or image_info_response(prompt)
-            or llm.invoke(st.session_state.messages).content
-            or get_movie_info(prompt)
-        )
+        answer = smart_answer(prompt)
+
+        if not answer:
+            answer = image_info_response(prompt)
+
+        if not answer:
+            answer = web_scrape_summary(prompt)
+
+        if not answer:
+            answer = llm.invoke(st.session_state.messages).content
 
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
-
