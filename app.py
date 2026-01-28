@@ -41,11 +41,10 @@ def smart_answer(prompt):
 
     return None
 
-# ---------------- IMAGE DETECTION ----------------
+# ---------------- IMAGE RESPONSE ----------------
 def image_info_response(query):
     if "image" not in query.lower():
         return None
-
     try:
         wikipedia.set_lang("en")
         topic = query.replace("image", "").strip()
@@ -100,7 +99,6 @@ if prompt:
 
     with st.chat_message("assistant"):
         reply = smart_answer(prompt) or image_info_response(prompt)
-
         if not reply:
             reply = llm.invoke(st.session_state.messages).content
 
