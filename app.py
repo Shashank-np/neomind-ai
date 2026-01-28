@@ -19,9 +19,6 @@ st.set_page_config(
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
-
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
@@ -57,9 +54,8 @@ def web_scrape_summary(query):
 
         if snippet:
             return f"🌐 **From the web:**\n\n{snippet.text}"
-
     except:
-        return None
+        pass
 
     return None
 
@@ -157,8 +153,16 @@ if prompt:
         if not answer:
             answer = web_scrape_summary(prompt)
 
+        # ---- SAFE LLM CALL ----
         if not answer:
-            answer = llm.invoke(st.session_state.messages).content
+            try:
+                answer = llm.invoke(st.session_state.messages).content
+            except Exception:
+                answer = (
+                    "⚠️ **Maximum chat limit reached.**\n\n"
+                    "This usually happens when the conversation becomes too long.\n\n"
+                    "👉 Please click **Clear Chat** and try again."
+                )
 
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
