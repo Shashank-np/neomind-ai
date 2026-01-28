@@ -1,9 +1,12 @@
 import streamlit as st
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 import pytz
 import wikipedia
-from bs4 import BeautifulSoup
+
+# LangChain + Groq
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage, AIMessage
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -40,7 +43,7 @@ else:
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
-        res = requests.get("https://ipapi.co/json/").json()
+        res = requests.get("https://ipapi.co/json/", timeout=5).json()
         return pytz.timezone(res.get("timezone", "UTC"))
     except:
         return pytz.UTC
@@ -50,7 +53,7 @@ tz = get_timezone()
 # ---------------- SMART LOGIC ----------------
 def smart_answer(prompt):
     text = prompt.lower().strip()
-    now = datetime.today().astimezone(tz)
+    now = datetime.now(tz)
 
     if text in ["time", "current time", "what is the time"]:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
@@ -60,79 +63,56 @@ def smart_answer(prompt):
 
     return None
 
-# ---------------- IMAGE INTENT DETECTOR ----------------
+# ---------------- IMAGE INTENT ----------------
 def is_image_request(query):
-    keywords = ["image", "photo", "pictures", "wallpaper", "pics"]
+    keywords = ["image", "photo", "picture", "wallpaper", "pics"]
     return any(k in query.lower() for k in keywords)
 
-# ---------------- STRUCTURED IMAGE RESPONSE ----------------
+# ---------------- IMAGE RESPONSE ----------------
 def image_info_response(query):
     if not is_image_request(query):
         return None
 
     try:
         wikipedia.set_lang("en")
-        page = wikipedia.page(query.replace("image", "").strip(), auto_suggest=True)
+        search_term = query.replace("image", "").strip()
+        page = wikipedia.page(search_term, auto_suggest=True)
         summary = wikipedia.summary(page.title, sentences=2)
 
         title = page.title
 
-        response = f"""
+        return f"""
 ### **{title}**
-
-Here are some images of **{title}** — sourced from trusted public image galleries and references.
 
 {summary}
 
-📌 **Quick Info (so you know what the images represent)**
+📸 **More images**
 
-- **{title}** is a well-known historical and cultural landmark.
-- The images show important architectural views and surroundings.
-- These visuals are commonly used for educational and devotional purposes.
+🔗 https://commons.wikimedia.org/wiki/{title.replace(" ", "_")}  
+🔗 https://www.pinterest.com/search/pins/?q={title.replace(" ", "%20")}  
 
-📸 **More photos & wallpapers**
-
-If you want different angles or high-resolution wallpapers, explore these trusted galleries:
-
-🔗 **Wikipedia Media:** https://commons.wikimedia.org/wiki/{title.replace(" ", "_")}  
-🔗 **Pinterest HD Images:** https://www.pinterest.com/search/pins/?q={title.replace(" ", "%20")}  
-🔗 **Getty Images:** https://www.gettyimages.com/photos/{title.replace(" ", "-")}  
-🔗 **Adobe Stock:** https://stock.adobe.com/search?k={title.replace(" ", "+")}
-
-Let me know if you want **download links**, **history**, or **visiting information** 🙏✨
+Tell me if you want **HD wallpapers** or **history** 🙌
 """
-        return response
-
-    except:
+    except wikipedia.DisambiguationError:
+        return "⚠️ I found multiple results. Please be more specific."
+    except wikipedia.PageError:
+        return "❌ I couldn’t find an exact page for this."
+    except Exception:
         return None
 
-# ---------------- MOVIE SEARCH ----------------
+# ---------------- MOVIE INFO ----------------
 def get_movie_info(title):
     try:
         page = wikipedia.page(title, auto_suggest=True)
         summary = wikipedia.summary(page.title, sentences=2)
 
-        title = page.title
-
-        response = f"""
-### **{title}**
-
-🎥 **Movie Info**
+        return f"""
+### 🎬 **{page.title}**
 
 {summary}
 
-📺 **Trailer & Reviews**
-
-If you want to watch the trailer or read reviews, explore these trusted links:
-
-🔗 **IMDB:** https://www.imdb.com/title/{page.pageid}/  
-🔗 **Rotten Tomatoes:** https://www.rottentomatoes.com/m/{page.pageid}/  
-🔗 **Wikipedia:** https://en.wikipedia.org/wiki/{title.replace(" ", "_")}
-
-Let me know if you want **more info** or **similar movies** 🙏✨
+🔗 https://en.wikipedia.org/wiki/{page.title.replace(" ", "_")}
 """
-        return response
-
     except:
         return None
 
@@ -150,12 +130,16 @@ with st.sidebar:
     st.divider()
     st.caption("Created by **Shashank N P**")
 
-# ---------------- LLM ----------------
-llm = ChatGroq(
-    model="llama-3.1-8b-instant",
-    api_key=st.secrets["GROQ_API_KEY"],
-    temperature=temperature,
-)
+# ---------------- LLM INIT ----------------
+try:
+    llm = ChatGroq(
+        model="llama-3.1-8b-instant",
+        api_key=st.secrets["GROQ_API_KEY"],
+        temperature=temperature,
+    )
+except KeyError:
+    st.error("❌ GROQ_API_KEY not found in Streamlit secrets")
+    st.stop()
 
 # ---------------- HERO ----------------
 st.markdown("""
@@ -167,7 +151,8 @@ st.markdown("""
 
 # ---------------- CHAT HISTORY ----------------
 for m in st.session_state.messages:
-    with st.chat_message("user" if isinstance(m, HumanMessage) else "assistant"):
+    role = "user" if isinstance(m, HumanMessage) else "assistant"
+    with st.chat_message(role):
         st.markdown(m.content)
 
 # ---------------- INPUT ----------------
@@ -181,13 +166,16 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        answer = (
-            smart_answer(prompt)
-            or image_info_response(prompt)
-            or llm.invoke(st.session_state.messages).content
-            or get_movie_info(prompt)
-        )
+        answer = smart_answer(prompt)
+
+        if not answer:
+            answer = image_info_response(prompt)
+
+        if not answer:
+            answer = get_movie_info(prompt)
+
+        if not answer:
+            answer = llm.invoke(st.session_state.messages).content
 
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
-
