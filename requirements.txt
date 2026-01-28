@@ -1,5 +1,6 @@
 streamlit
 requests
+pytz
+wikipedia
 langchain
-langchain-core
 langchain-groq
