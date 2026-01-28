@@ -98,6 +98,32 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
+    st.divider()
+    st.subheader("🆘 Feedback")
+
+    feedback = st.text_area(
+        "Share your feedback or suggestions",
+        placeholder="Tell us what to improve..."
+    )
+
+    if st.button("Send Feedback"):
+        if feedback.strip():
+            try:
+                requests.post(
+                    "https://formspree.io/f/xblanbjk",
+                    data={"message": feedback},
+                    headers={"Accept": "application/json"},
+                    timeout=5
+                )
+                st.success("✅ Feedback sent. Thank you!")
+            except:
+                st.error("❌ Failed to send feedback.")
+        else:
+            st.warning("⚠️ Please write some feedback before sending.")
+
+    st.divider()
+    st.caption("Created by **Shashank N P**")
+
 # ---------------- LLM ----------------
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
