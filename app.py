@@ -55,7 +55,6 @@ def smart_answer(prompt):
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
-
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
@@ -108,11 +107,14 @@ for msg in st.session_state.messages:
         st.markdown(msg.content)
 
 # ==================================================
-# 🎙️ VOICE INPUT (PLACED JUST ABOVE TEXT BOX)
+# 🔽 INPUT AREA (VOICE + TEXT TOGETHER AT BOTTOM)
 # ==================================================
-st.markdown("### 🎙️ Voice Input")
 
-audio = st.audio_input("Click mic and speak")
+st.markdown("---")
+st.markdown("### 🎙️ Voice or Text Input")
+
+# ---- Voice input (adds user message only) ----
+audio = st.audio_input("Speak your message")
 
 if audio:
     try:
@@ -124,17 +126,26 @@ if audio:
 
         transcript = recognizer.recognize_google(audio_data)
 
-        st.success(f"You said: {transcript}")
+        # Add as USER message
         st.session_state.messages.append(
             HumanMessage(content=transcript)
         )
 
-    except:
-        st.error("Sorry, I couldn't understand the audio.")
+        # Generate AI response
+        answer = smart_answer(transcript)
+        if not answer:
+            answer = llm.invoke(st.session_state.messages).content
 
-# ==================================================
-# 💬 CHAT INPUT WITH ARROW (BOTTOM)
-# ==================================================
+        st.session_state.messages.append(
+            AIMessage(content=answer)
+        )
+
+        st.rerun()
+
+    except:
+        st.error("Sorry, I couldn't understand your voice.")
+
+# ---- Text input with arrow ----
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
@@ -142,15 +153,12 @@ if prompt:
         HumanMessage(content=prompt)
     )
 
-    with st.chat_message("user"):
-        st.markdown(prompt)
+    answer = smart_answer(prompt)
+    if not answer:
+        answer = llm.invoke(st.session_state.messages).content
 
-    with st.chat_message("assistant"):
-        answer = smart_answer(prompt)
-        if not answer:
-            answer = llm.invoke(st.session_state.messages).content
+    st.session_state.messages.append(
+        AIMessage(content=answer)
+    )
 
-        st.markdown(answer)
-        st.session_state.messages.append(
-            AIMessage(content=answer)
-        )
+    st.rerun()
