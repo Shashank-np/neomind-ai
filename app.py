@@ -6,7 +6,13 @@ import tempfile
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
-from gtts import gTTS
+
+# ---------------- SAFE gTTS IMPORT ----------------
+try:
+    from gtts import gTTS
+    TTS_AVAILABLE = True
+except ModuleNotFoundError:
+    TTS_AVAILABLE = False
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -31,9 +37,9 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "audio_cache" not in st.session_state:
-    st.session_state.audio_cache = {}  # msg_id -> audio_path
+    st.session_state.audio_cache = {}
 
-# ---------------- TIMEZONE ----------------
+# ---------------- TIMEZONE (CACHED) ----------------
 @st.cache_data(ttl=3600)
 def get_timezone():
     try:
@@ -60,6 +66,7 @@ def smart_answer(prompt):
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
+
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
@@ -110,11 +117,11 @@ for i, msg in enumerate(st.session_state.messages):
     with st.chat_message(role):
         st.markdown(msg.content)
 
-        # 🔊 Play cached audio ONLY (no regeneration)
+        # 🔊 Play cached audio only (NO regeneration)
         if role == "assistant" and i in st.session_state.audio_cache:
             st.audio(st.session_state.audio_cache[i])
 
-# ---------------- CHAT INPUT ----------------
+# ---------------- CHAT INPUT (WITH ARROW) ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
@@ -131,10 +138,13 @@ if prompt:
         st.markdown(answer)
 
         # 🔊 Generate TTS ONCE for this message
-        tts = gTTS(answer)
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-            tts.save(fp.name)
-            st.audio(fp.name)
-            st.session_state.audio_cache[len(st.session_state.messages)] = fp.name
+        if TTS_AVAILABLE:
+            tts = gTTS(answer)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+                tts.save(fp.name)
+                st.audio(fp.name)
+                st.session_state.audio_cache[len(st.session_state.messages)] = fp.name
+        else:
+            st.info("🔊 Voice feature unavailable (gTTS not installed).")
 
         st.session_state.messages.append(AIMessage(content=answer))
