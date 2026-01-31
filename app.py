@@ -21,22 +21,18 @@ st.markdown("""
 /* Chat bubbles */
 section[data-testid="stChatMessage"] {
     border-radius: 12px;
-    padding: 10px;
+    padding: 12px;
 }
 
-/* ---- MINIMIZED VOICE INPUT ---- */
+/* Compact voice input */
 section[data-testid="stAudioInput"] {
-    padding: 2px !important;
-    margin: 0 0 4px 0 !important;
-    border-radius: 8px;
+    padding: 4px !important;
+    margin: 0 0 6px 0 !important;
+    border-radius: 10px;
 }
 
 section[data-testid="stAudioInput"] audio {
-    height: 22px !important;
-}
-
-section[data-testid="stAudioInput"] button {
-    transform: scale(0.85);
+    height: 26px !important;
 }
 
 /* Sticky input area */
@@ -44,7 +40,7 @@ section[data-testid="stAudioInput"] button {
     position: sticky;
     bottom: 0;
     background: white;
-    padding-top: 4px;
+    padding-top: 6px;
     z-index: 10;
     border-top: 1px solid #eee;
 }
@@ -98,6 +94,31 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
+
+    # ---------- FEEDBACK (FIXED) ----------
+    st.subheader("🆘 Feedback")
+
+    feedback_text = st.text_area(
+        label="Your feedback",
+        placeholder="Tell us what you like or what we can improve…",
+        height=90
+    )
+
+    if st.button("📨 Send Feedback"):
+        if feedback_text.strip():
+            try:
+                requests.post(
+                    "https://formspree.io/f/xblanbjk",
+                    data={"feedback": feedback_text},
+                    timeout=5
+                )
+                st.success("✅ Thanks for your feedback!")
+            except:
+                st.error("❌ Failed to send feedback. Try again.")
+        else:
+            st.warning("⚠️ Please write something before sending.")
+
+    st.divider()
     st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
@@ -108,7 +129,10 @@ llm = ChatGroq(
 )
 
 # ---------------- HEADER ----------------
-st.markdown("<h1 style='text-align:center'>💬 NeoMind AI</h1>", unsafe_allow_html=True)
+st.markdown(
+    "<h1 style='text-align:center'>💬 NeoMind AI</h1>",
+    unsafe_allow_html=True
+)
 
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
@@ -119,7 +143,7 @@ for msg in st.session_state.messages:
 # ================= INPUT ZONE =================
 st.markdown('<div class="input-zone">', unsafe_allow_html=True)
 
-# ---- COMPACT VOICE INPUT ----
+# ---- Voice input (compact + safe) ----
 audio = st.audio_input("🎙️", label_visibility="collapsed")
 
 if audio:
@@ -152,9 +176,9 @@ if audio:
             st.rerun()
 
         except:
-            pass  # no error spam
+            pass  # no repeated error spam
 
-# ---- TEXT INPUT (ARROW BUTTON) ----
+# ---- Text input with arrow ----
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
