@@ -2,5 +2,8 @@ streamlit
 requests
 pytz
 wikipedia
-langchain
+beautifulsoup4
 langchain-groq
+langchain-core
+streamlit-mic-recorder
+SpeechRecognition
