@@ -52,6 +52,17 @@ section[data-testid="stAudioInput"] button {
 /* Hide footer */
 footer {visibility: hidden;}
 
+/* Make the audio input box smaller */
+.input-zone {
+    height: 30px;
+}
+
+/* Make the arrow button smaller */
+.stButton {
+    padding: 2px 8px;
+    font-size: 12px;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -120,7 +131,7 @@ for msg in st.session_state.messages:
 st.markdown('<div class="input-zone">', unsafe_allow_html=True)
 
 # ---- COMPACT VOICE INPUT ----
-audio = st.audio_input("🎙️", label_visibility="collapsed")
+audio = st.audio_input("🎙️", label_visibility="collapsed", height=30)
 
 if audio:
     audio_hash = hashlib.md5(audio.getvalue()).hexdigest()
@@ -155,7 +166,7 @@ if audio:
             pass  # no error spam
 
 # ---- TEXT INPUT (ARROW BUTTON) ----
-prompt = st.chat_input("Ask NeoMind AI anything…")
+prompt = st.chat_input("Ask NeoMind AI anything…", key="prompt", height=30)
 
 if prompt:
     st.session_state.messages.append(
