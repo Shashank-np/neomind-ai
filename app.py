@@ -57,6 +57,34 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
+
+    # -------- FEEDBACK BOX (UPDATED) --------
+    st.subheader("🆘 Feedback")
+
+    feedback_text = st.text_area(
+        "Tell us what you think",
+        placeholder="Your feedback helps us improve NeoMind AI…",
+        height=120
+    )
+
+    if st.button("📨 Send Feedback"):
+        if feedback_text.strip():
+            try:
+                requests.post(
+                    "https://formspree.io/f/xblanbjk",
+                    data={
+                        "feedback": feedback_text,
+                        "source": "NeoMind AI App"
+                    },
+                    timeout=5
+                )
+                st.success("✅ Feedback sent successfully!")
+            except:
+                st.error("❌ Failed to send feedback. Please try again.")
+        else:
+            st.warning("⚠️ Please write some feedback before sending.")
+
+    st.divider()
     st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
@@ -90,7 +118,6 @@ if audio_bytes:
         import speech_recognition as sr
 
         recognizer = sr.Recognizer()
-
         with sr.AudioFile(audio_bytes) as source:
             audio_data = recognizer.record(source)
 
@@ -102,7 +129,7 @@ if audio_bytes:
             HumanMessage(content=transcript)
         )
 
-    except Exception as e:
+    except:
         st.error("Sorry, I couldn't understand your voice.")
 
 # ---------------- CHAT RESPONSE ----------------
