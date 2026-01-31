@@ -17,27 +17,40 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-/* Remove resize arrow + beautify textbox */
+/* Chat input style */
 textarea {
     width: 100% !important;
     min-height: 90px !important;
     resize: none !important;
     font-size: 16px !important;
-    padding: 14px !important;
-    border-radius: 10px !important;
+    padding: 14px 52px 14px 14px !important;
+    border-radius: 12px !important;
     border: 1px solid #e0e0e0 !important;
     background-color: #f9fafb !important;
 }
 
-/* Better spacing for labels */
-label {
-    font-weight: 600 !important;
-    margin-bottom: 6px !important;
+/* Send button style */
+.send-btn button {
+    position: relative;
+    margin-top: -65px;
+    float: right;
+    margin-right: 14px;
+    background-color: #4f46e5;
+    color: white;
+    border-radius: 50%;
+    height: 42px;
+    width: 42px;
+    border: none;
+    font-size: 18px;
 }
 
-/* Audio input styling */
+.send-btn button:hover {
+    background-color: #4338ca;
+}
+
+/* Audio input box */
 section[data-testid="stAudioInput"] {
-    border-radius: 10px;
+    border-radius: 12px;
     background-color: #f9fafb;
     padding: 10px;
     border: 1px solid #e0e0e0;
@@ -126,16 +139,24 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ---------------- CHAT INPUT ----------------
+# ---------------- CHAT INPUT + SEND BUTTON ----------------
 prompt = st.text_area(
     "Ask NeoMind AI anything…",
-    placeholder="Type your message here…"
+    placeholder="Type your message here…",
+    key="chat_input"
 )
 
-if prompt:
+send = st.container()
+with send:
+    st.markdown('<div class="send-btn">', unsafe_allow_html=True)
+    send_clicked = st.button("➤", key="send_btn")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+if send_clicked and prompt.strip():
     st.session_state.messages.append(
         HumanMessage(content=prompt)
     )
+    st.session_state.chat_input = ""
 
 # ---------------- VOICE INPUT ----------------
 st.markdown("### 🎙️ Voice Input")
