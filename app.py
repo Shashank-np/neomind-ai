@@ -13,7 +13,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- GLOBAL STYLE ----------------
+# ---------------- BASIC STYLES ----------------
 st.markdown("""
 <style>
 section[data-testid="stChatMessage"] {
@@ -96,7 +96,10 @@ llm = ChatGroq(
 )
 
 # ---------------- HEADER ----------------
-st.markdown("<h1 style='text-align:center'>💬 NeoMind AI</h1>", unsafe_allow_html=True)
+st.markdown(
+    "<h1 style='text-align:center'>💬 NeoMind AI</h1>",
+    unsafe_allow_html=True
+)
 
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
@@ -104,11 +107,40 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
-# ---------------- CHAT INPUT (ARROW INCLUDED) ----------------
+# ==================================================
+# 🎙️ VOICE INPUT (PLACED JUST ABOVE TEXT BOX)
+# ==================================================
+st.markdown("### 🎙️ Voice Input")
+
+audio = st.audio_input("Click mic and speak")
+
+if audio:
+    try:
+        import speech_recognition as sr
+
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(audio) as source:
+            audio_data = recognizer.record(source)
+
+        transcript = recognizer.recognize_google(audio_data)
+
+        st.success(f"You said: {transcript}")
+        st.session_state.messages.append(
+            HumanMessage(content=transcript)
+        )
+
+    except:
+        st.error("Sorry, I couldn't understand the audio.")
+
+# ==================================================
+# 💬 CHAT INPUT WITH ARROW (BOTTOM)
+# ==================================================
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
-    st.session_state.messages.append(HumanMessage(content=prompt))
+    st.session_state.messages.append(
+        HumanMessage(content=prompt)
+    )
 
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -119,4 +151,6 @@ if prompt:
             answer = llm.invoke(st.session_state.messages).content
 
         st.markdown(answer)
-        st.session_state.messages.append(AIMessage(content=answer))
+        st.session_state.messages.append(
+            AIMessage(content=answer)
+        )
