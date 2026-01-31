@@ -3,8 +3,8 @@ import requests
 from datetime import datetime
 import pytz
 import tempfile
-from gtts import gTTS
 
+from gtts import gTTS
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -18,16 +18,11 @@ st.set_page_config(
 # ---------------- GLOBAL STYLES ----------------
 st.markdown("""
 <style>
-
-/* Chat message style */
 section[data-testid="stChatMessage"] {
     border-radius: 12px;
     padding: 12px;
 }
-
-/* Remove footer */
 footer {visibility: hidden;}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -62,6 +57,7 @@ def smart_answer(prompt):
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
+
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
@@ -111,14 +107,13 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
-        # 🔊 Voice for AI messages
         if role == "assistant":
             tts = gTTS(msg.content)
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
                 tts.save(fp.name)
                 st.audio(fp.name)
 
-# ---------------- CHAT INPUT ----------------
+# ---------------- CHAT INPUT (WITH ARROW) ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
@@ -134,7 +129,7 @@ if prompt:
 
         st.markdown(answer)
 
-        # 🔊 Generate voice for AI reply
+        # 🔊 Voice output for AI reply
         tts = gTTS(answer)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
             tts.save(fp.name)
