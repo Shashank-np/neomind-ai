@@ -172,7 +172,7 @@ st.markdown("""
 </style>
 
 <div id="mic-outside" onclick="startMic()">🎤</div>
-<div id="mic-status" style="position:fixed; bottom:90px; right:20px; font-size:13px;"></div>
+<div id="mic-status" style="position:fixed; bottom:10px; right:20px; font-size:13px;"></div>
 """, unsafe_allow_html=True)
 
 # ---------------- ORIGINAL INPUT (UNCHANGED) ----------------
@@ -192,4 +192,5 @@ if prompt:
 
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
+
 
