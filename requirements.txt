@@ -1,6 +1,8 @@
 streamlit
 requests
 pytz
-langchain-groq
-gtts
+wikipedia
+beautifulsoup4
+pydub
 speechrecognition
+langchain-groq
