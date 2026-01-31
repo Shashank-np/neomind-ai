@@ -19,8 +19,8 @@ st.set_page_config(
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "voice_text" not in st.session_state:
-    st.session_state.voice_text = ""
+if "input_text" not in st.session_state:
+    st.session_state.input_text = ""
 
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
@@ -51,10 +51,8 @@ def web_scrape_summary(query):
         url = f"https://www.google.com/search?q={query}"
         headers = {"User-Agent": "Mozilla/5.0"}
         res = requests.get(url, headers=headers, timeout=5)
-
         soup = BeautifulSoup(res.text, "html.parser")
         snippet = soup.find("div", class_="BNeawe s3v9rd AP7Wnd")
-
         if snippet:
             return f"🌐 **From the web:**\n\n{snippet.text}"
     except:
@@ -65,22 +63,18 @@ def web_scrape_summary(query):
 def image_info_response(query):
     if "image" not in query.lower():
         return None
-
     try:
         topic = query.replace("image", "").strip()
         wikipedia.set_lang("en")
         page = wikipedia.page(topic, auto_suggest=True)
         summary = wikipedia.summary(page.title, sentences=2)
-
         return f"""
 ### 🖼️ **{page.title}**
-
 {summary}
-
 🔗 https://commons.wikimedia.org/wiki/{page.title.replace(" ", "_")}
 """
     except:
-        return "❌ No image info found."
+        return None
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
@@ -101,7 +95,7 @@ llm = ChatGroq(
     temperature=temperature,
 )
 
-# ---------------- UI ----------------
+# ---------------- CHAT UI ----------------
 st.markdown("<h1 style='text-align:center'>💬 NeoMind AI</h1>", unsafe_allow_html=True)
 
 for msg in st.session_state.messages:
@@ -109,40 +103,96 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
-# ---------------- MIC (BROWSER BASED) ----------------
-st.markdown(
-    """
-    <script>
-    const startDictation = () => {
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'en-US';
-        recognition.start();
+# ---------------- VOICE SCRIPT ----------------
+st.markdown("""
+<script>
+let recognition;
+let listening = false;
 
-        recognition.onresult = function(event) {
-            const text = event.results[0][0].transcript;
-            const input = window.parent.document.querySelector('textarea');
-            input.value = text;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-        }
+function startMic() {
+    if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech Recognition not supported in this browser");
+        return;
     }
-    </script>
-    """,
-    unsafe_allow_html=True
-)
 
-col1, col2 = st.columns([0.9, 0.1])
+    recognition = new webkitSpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
 
-with col1:
-    prompt = st.chat_input("Ask NeoMind AI anything…")
+    recognition.onstart = () => {
+        listening = true;
+        document.getElementById("micStatus").innerText = "🎤 Listening...";
+    };
 
-with col2:
-    st.markdown(
-        """
-        <button onclick="startDictation()" 
-        style="font-size:22px; padding:6px; cursor:pointer;">🎤</button>
-        """,
-        unsafe_allow_html=True
-    )
+    recognition.onresult = (event) => {
+        let text = "";
+        for (let i = 0; i < event.results.length; i++) {
+            text += event.results[i][0].transcript + " ";
+        }
+        const textarea = document.getElementById("neoInput");
+        textarea.value = text.trim();
+        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+
+    recognition.onend = () => {
+        listening = false;
+        document.getElementById("micStatus").innerText = "";
+    };
+
+    recognition.start();
+}
+</script>
+""", unsafe_allow_html=True)
+
+# ---------------- INPUT BAR (UI SAME) ----------------
+st.markdown("""
+<style>
+.chat-bar {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.chat-bar textarea {
+    width: 100%;
+    height: 42px;
+    border-radius: 12px;
+    padding: 10px;
+    border: 1px solid #444;
+    background-color: #1e1e1e;
+    color: white;
+}
+.chat-btn {
+    height: 42px;
+    width: 42px;
+    border-radius: 50%;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+}
+</style>
+
+<div class="chat-bar">
+    <textarea id="neoInput" placeholder="Ask NeoMind AI anything..."></textarea>
+    <button class="chat-btn" onclick="startMic()">🎤</button>
+    <button class="chat-btn" onclick="sendText()">⬆️</button>
+</div>
+<div id="micStatus" style="margin-top:6px; font-size:14px;"></div>
+
+<script>
+function sendText() {
+    const text = document.getElementById("neoInput").value;
+    const streamlitInput = window.parent.document.querySelector('input[data-testid="stTextInput"]');
+    if (streamlitInput) {
+        streamlitInput.value = text;
+        streamlitInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+}
+</script>
+""", unsafe_allow_html=True)
+
+# ---------------- HIDDEN INPUT ----------------
+prompt = st.text_input("", key="hidden_input", label_visibility="collapsed")
 
 # ---------------- CHAT HANDLER ----------------
 if prompt:
@@ -152,19 +202,10 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        answer = smart_answer(prompt)
+        answer = smart_answer(prompt) or image_info_response(prompt) or web_scrape_summary(prompt)
 
         if not answer:
-            answer = image_info_response(prompt)
-
-        if not answer:
-            answer = web_scrape_summary(prompt)
-
-        if not answer:
-            try:
-                answer = llm.invoke(st.session_state.messages).content
-            except:
-                answer = "⚠️ Please clear chat and try again."
+            answer = llm.invoke(st.session_state.messages).content
 
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
