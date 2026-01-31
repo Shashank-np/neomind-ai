@@ -83,6 +83,29 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
+    st.subheader("🆘 Feedback")
+
+    feedback = st.text_area(
+        "Share your feedback or suggestions",
+        placeholder="Tell us what to improve..."
+    )
+
+    if st.button("Send Feedback"):
+        if feedback.strip():
+            try:
+                requests.post(
+                    "https://formspree.io/f/xblanbjk",  # keep your form ID
+                    data={"message": feedback},
+                    headers={"Accept": "application/json"},
+                    timeout=5
+                )
+                st.success("✅ Feedback sent. Thank you!")
+            except:
+                st.error("❌ Failed to send feedback.")
+        else:
+            st.warning("⚠️ Please write feedback before sending.")
+
+    st.divider()
     st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
@@ -140,7 +163,7 @@ function startMic() {
 </script>
 """, unsafe_allow_html=True)
 
-# ---------------- MIC BUTTON (FLOATING, UI SAFE) ----------------
+# ---------------- MIC BUTTON (FLOATING) ----------------
 st.markdown("""
 <style>
 #mic-float {
@@ -157,7 +180,7 @@ st.markdown("""
 <div id="mic-status" style="position:fixed; bottom:65px; right:80px; font-size:14px;"></div>
 """, unsafe_allow_html=True)
 
-# ---------------- ORIGINAL CHAT INPUT (UNCHANGED) ----------------
+# ---------------- ORIGINAL CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything...")
 
 # ---------------- CHAT HANDLER ----------------
