@@ -7,11 +7,11 @@ import tempfile
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 
-# ---------------- SAFE gTTS IMPORT ----------------
+# Safe optional TTS import
 try:
     from gtts import gTTS
     TTS_AVAILABLE = True
-except ModuleNotFoundError:
+except:
     TTS_AVAILABLE = False
 
 # ---------------- PAGE CONFIG ----------------
@@ -21,7 +21,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- GLOBAL STYLES ----------------
+# ---------------- STYLES ----------------
 st.markdown("""
 <style>
 section[data-testid="stChatMessage"] {
@@ -39,7 +39,7 @@ if "messages" not in st.session_state:
 if "audio_cache" not in st.session_state:
     st.session_state.audio_cache = {}
 
-# ---------------- TIMEZONE (CACHED) ----------------
+# ---------------- TIMEZONE ----------------
 @st.cache_data(ttl=3600)
 def get_timezone():
     try:
@@ -66,36 +66,12 @@ def smart_answer(prompt):
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
-
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.audio_cache = {}
         st.rerun()
-
-    st.divider()
-    st.subheader("🆘 Feedback")
-
-    feedback = st.text_area(
-        "Tell us what you think",
-        placeholder="Your feedback helps us improve NeoMind AI…",
-        height=120
-    )
-
-    if st.button("📨 Send Feedback"):
-        if feedback.strip():
-            try:
-                requests.post(
-                    "https://formspree.io/f/xblanbjk",
-                    data={"feedback": feedback},
-                    timeout=5
-                )
-                st.success("✅ Feedback sent!")
-            except:
-                st.error("❌ Failed to send feedback")
-        else:
-            st.warning("⚠️ Please write feedback")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -110,18 +86,25 @@ llm = ChatGroq(
 # ---------------- HEADER ----------------
 st.markdown("<h1 style='text-align:center'>💬 NeoMind AI</h1>", unsafe_allow_html=True)
 
-# ---------------- CHAT HISTORY (FAST) ----------------
+# ---------------- CHAT HISTORY ----------------
 for i, msg in enumerate(st.session_state.messages):
     role = "user" if isinstance(msg, HumanMessage) else "assistant"
 
     with st.chat_message(role):
         st.markdown(msg.content)
 
-        # 🔊 Play cached audio only (NO regeneration)
-        if role == "assistant" and i in st.session_state.audio_cache:
-            st.audio(st.session_state.audio_cache[i])
+        # 🔊 Optional voice button (FAST)
+        if role == "assistant" and TTS_AVAILABLE:
+            if st.button("🔊 Play voice", key=f"voice_{i}"):
+                if i not in st.session_state.audio_cache:
+                    tts = gTTS(msg.content)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+                        tts.save(fp.name)
+                        st.session_state.audio_cache[i] = fp.name
 
-# ---------------- CHAT INPUT (WITH ARROW) ----------------
+                st.audio(st.session_state.audio_cache[i])
+
+# ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
@@ -136,15 +119,4 @@ if prompt:
             answer = llm.invoke(st.session_state.messages).content
 
         st.markdown(answer)
-
-        # 🔊 Generate TTS ONCE for this message
-        if TTS_AVAILABLE:
-            tts = gTTS(answer)
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-                tts.save(fp.name)
-                st.audio(fp.name)
-                st.session_state.audio_cache[len(st.session_state.messages)] = fp.name
-        else:
-            st.info("🔊 Voice feature unavailable (gTTS not installed).")
-
         st.session_state.messages.append(AIMessage(content=answer))
