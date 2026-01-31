@@ -13,13 +13,47 @@ st.set_page_config(
     layout="wide"
 )
 
-st.toast("NeoMind AI is ready 🎙️", icon="🧠")
+# ---------------- GLOBAL STYLES ----------------
+st.markdown("""
+<style>
+
+/* Remove resize arrow + beautify textbox */
+textarea {
+    width: 100% !important;
+    min-height: 90px !important;
+    resize: none !important;
+    font-size: 16px !important;
+    padding: 14px !important;
+    border-radius: 10px !important;
+    border: 1px solid #e0e0e0 !important;
+    background-color: #f9fafb !important;
+}
+
+/* Better spacing for labels */
+label {
+    font-weight: 600 !important;
+    margin-bottom: 6px !important;
+}
+
+/* Audio input styling */
+section[data-testid="stAudioInput"] {
+    border-radius: 10px;
+    background-color: #f9fafb;
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+}
+
+/* Remove Streamlit footer */
+footer {visibility: hidden;}
+
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ---------------- TIMEZONE (CACHED) ----------------
+# ---------------- TIMEZONE ----------------
 @st.cache_data(ttl=3600)
 def get_timezone():
     try:
@@ -28,10 +62,7 @@ def get_timezone():
     except:
         return pytz.UTC
 
-if "tz" not in st.session_state:
-    st.session_state.tz = get_timezone()
-
-tz = st.session_state.tz
+tz = get_timezone()
 
 # ---------------- SMART ANSWERS ----------------
 def smart_answer(prompt):
@@ -58,21 +89,19 @@ with st.sidebar:
 
     st.divider()
 
-    # -------- FEEDBACK BOX --------
     st.subheader("🆘 Feedback")
-
-    feedback_text = st.text_area(
+    feedback = st.text_area(
         "Tell us what you think",
         placeholder="Your feedback helps us improve NeoMind AI…",
         height=120
     )
 
     if st.button("📨 Send Feedback"):
-        if feedback_text.strip():
+        if feedback.strip():
             try:
                 requests.post(
                     "https://formspree.io/f/xblanbjk",
-                    data={"feedback": feedback_text},
+                    data={"feedback": feedback},
                     timeout=5
                 )
                 st.success("✅ Feedback sent!")
@@ -91,28 +120,16 @@ llm = ChatGroq(
     temperature=temperature
 )
 
-# ---------------- UI HEADER ----------------
+# ---------------- HEADER ----------------
 st.markdown(
     "<h1 style='text-align:center'>💬 NeoMind AI</h1>",
     unsafe_allow_html=True
 )
 
-# ---------------- INPUT STYLE FIX ----------------
-st.markdown("""
-<style>
-textarea {
-    width: 100% !important;
-    min-height: 70px !important;
-    font-size: 16px !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------- TEXT INPUT (FIXED SIZE) ----------------
+# ---------------- CHAT INPUT ----------------
 prompt = st.text_area(
-    "Ask NeoMind AI anything...",
-    placeholder="Type your message here…",
-    height=70
+    "Ask NeoMind AI anything…",
+    placeholder="Type your message here…"
 )
 
 if prompt:
@@ -120,9 +137,8 @@ if prompt:
         HumanMessage(content=prompt)
     )
 
-# ---------------- 🎙️ LIVE MIC INPUT ----------------
+# ---------------- VOICE INPUT ----------------
 st.markdown("### 🎙️ Voice Input")
-
 audio_bytes = st.audio_input("Click mic and speak")
 
 if audio_bytes:
@@ -136,20 +152,17 @@ if audio_bytes:
         transcript = recognizer.recognize_google(audio_data)
 
         st.success(f"You said: {transcript}")
-
         st.session_state.messages.append(
             HumanMessage(content=transcript)
         )
-
     except:
         st.error("Sorry, I couldn't understand your voice.")
 
-# ---------------- CHAT RESPONSE ----------------
+# ---------------- RESPONSE ----------------
 if st.session_state.messages:
     last_input = st.session_state.messages[-1].content
 
     answer = smart_answer(last_input)
-
     if not answer:
         answer = llm.invoke(st.session_state.messages).content
 
