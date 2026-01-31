@@ -13,13 +13,22 @@ st.set_page_config(
     layout="wide"
 )
 
-st.toast("NeoMind AI is ready 🎙️", icon="🧠")
+# ---------------- GLOBAL STYLE ----------------
+st.markdown("""
+<style>
+section[data-testid="stChatMessage"] {
+    border-radius: 12px;
+    padding: 12px;
+}
+footer {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ---------------- TIMEZONE (CACHED) ----------------
+# ---------------- TIMEZONE ----------------
 @st.cache_data(ttl=3600)
 def get_timezone():
     try:
@@ -28,10 +37,7 @@ def get_timezone():
     except:
         return pytz.UTC
 
-if "tz" not in st.session_state:
-    st.session_state.tz = get_timezone()
-
-tz = st.session_state.tz
+tz = get_timezone()
 
 # ---------------- SMART ANSWERS ----------------
 def smart_answer(prompt):
@@ -39,10 +45,10 @@ def smart_answer(prompt):
     now = datetime.now(tz)
 
     if text in ["time", "current time", "what is the time"]:
-        return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
+        return f"⏰ Current time: {now.strftime('%I:%M %p')}"
 
     if "today" in text:
-        return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
+        return f"📅 Today: {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
     return None
 
@@ -57,22 +63,20 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
-
-    # -------- FEEDBACK BOX --------
     st.subheader("🆘 Feedback")
 
-    feedback_text = st.text_area(
+    feedback = st.text_area(
         "Tell us what you think",
         placeholder="Your feedback helps us improve NeoMind AI…",
         height=120
     )
 
     if st.button("📨 Send Feedback"):
-        if feedback_text.strip():
+        if feedback.strip():
             try:
                 requests.post(
                     "https://formspree.io/f/xblanbjk",
-                    data={"feedback": feedback_text},
+                    data={"feedback": feedback},
                     timeout=5
                 )
                 st.success("✅ Feedback sent!")
@@ -91,69 +95,28 @@ llm = ChatGroq(
     temperature=temperature
 )
 
-# ---------------- UI HEADER ----------------
-st.markdown(
-    "<h1 style='text-align:center'>💬 NeoMind AI</h1>",
-    unsafe_allow_html=True
-)
+# ---------------- HEADER ----------------
+st.markdown("<h1 style='text-align:center'>💬 NeoMind AI</h1>", unsafe_allow_html=True)
 
-# ---------------- INPUT STYLE FIX ----------------
-st.markdown("""
-<style>
-textarea {
-    width: 100% !important;
-    min-height: 70px !important;
-    font-size: 16px !important;
-}
-</style>
-""", unsafe_allow_html=True)
+# ---------------- CHAT HISTORY ----------------
+for msg in st.session_state.messages:
+    role = "user" if isinstance(msg, HumanMessage) else "assistant"
+    with st.chat_message(role):
+        st.markdown(msg.content)
 
-# ---------------- TEXT INPUT (FIXED SIZE) ----------------
-prompt = st.text_area(
-    "Ask NeoMind AI anything...",
-    placeholder="Type your message here…",
-    height=70
-)
+# ---------------- CHAT INPUT (ARROW INCLUDED) ----------------
+prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
-    st.session_state.messages.append(
-        HumanMessage(content=prompt)
-    )
+    st.session_state.messages.append(HumanMessage(content=prompt))
 
-# ---------------- 🎙️ LIVE MIC INPUT ----------------
-st.markdown("### 🎙️ Voice Input")
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-audio_bytes = st.audio_input("Click mic and speak")
+    with st.chat_message("assistant"):
+        answer = smart_answer(prompt)
+        if not answer:
+            answer = llm.invoke(st.session_state.messages).content
 
-if audio_bytes:
-    try:
-        import speech_recognition as sr
-
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(audio_bytes) as source:
-            audio_data = recognizer.record(source)
-
-        transcript = recognizer.recognize_google(audio_data)
-
-        st.success(f"You said: {transcript}")
-
-        st.session_state.messages.append(
-            HumanMessage(content=transcript)
-        )
-
-    except:
-        st.error("Sorry, I couldn't understand your voice.")
-
-# ---------------- CHAT RESPONSE ----------------
-if st.session_state.messages:
-    last_input = st.session_state.messages[-1].content
-
-    answer = smart_answer(last_input)
-
-    if not answer:
-        answer = llm.invoke(st.session_state.messages).content
-
-    st.markdown(answer)
-    st.session_state.messages.append(
-        AIMessage(content=answer)
-    )
+        st.markdown(answer)
+        st.session_state.messages.append(AIMessage(content=answer))
