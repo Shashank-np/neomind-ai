@@ -85,25 +85,20 @@ with st.sidebar:
     st.divider()
     st.subheader("🆘 Feedback")
 
-    feedback = st.text_area(
-        "Share your feedback or suggestions",
-        placeholder="Tell us what to improve..."
-    )
-
+    feedback = st.text_area("Share your feedback", placeholder="Tell us what to improve...")
     if st.button("Send Feedback"):
         if feedback.strip():
             try:
                 requests.post(
-                    "https://formspree.io/f/xblanbjk",  # keep your form ID
+                    "https://formspree.io/f/xblanbjk",
                     data={"message": feedback},
-                    headers={"Accept": "application/json"},
                     timeout=5
                 )
-                st.success("✅ Feedback sent. Thank you!")
+                st.success("✅ Feedback sent")
             except:
-                st.error("❌ Failed to send feedback.")
+                st.error("❌ Failed to send feedback")
         else:
-            st.warning("⚠️ Please write feedback before sending.")
+            st.warning("⚠️ Please write feedback")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -123,14 +118,14 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
-# ---------------- MIC OVERLAY SCRIPT ----------------
+# ---------------- MIC SCRIPT ----------------
 st.markdown("""
 <script>
 let recognition;
 
 function startMic() {
     if (!('webkitSpeechRecognition' in window)) {
-        alert("Speech Recognition not supported in this browser");
+        alert("Speech recognition not supported");
         return;
     }
 
@@ -142,7 +137,7 @@ function startMic() {
     const status = document.getElementById("mic-status");
     status.innerText = "🎤 Listening...";
 
-    recognition.onresult = function(event) {
+    recognition.onresult = (event) => {
         let text = "";
         for (let i = 0; i < event.results.length; i++) {
             text += event.results[i][0].transcript + " ";
@@ -163,21 +158,21 @@ function startMic() {
 </script>
 """, unsafe_allow_html=True)
 
-# ---------------- MIC BUTTON (FLOATING) ----------------
+# ---------------- MIC ICON (CHATGPT STYLE) ----------------
 st.markdown("""
 <style>
-#mic-float {
+#mic-btn {
     position: fixed;
-    bottom: 26px;
-    right: 90px;
-    z-index: 1000;
-    font-size: 22px;
+    bottom: 34px;
+    right: 130px;   /* aligns next to arrow */
+    font-size: 20px;
     cursor: pointer;
+    z-index: 1000;
 }
 </style>
 
-<div id="mic-float" onclick="startMic()">🎤</div>
-<div id="mic-status" style="position:fixed; bottom:65px; right:80px; font-size:14px;"></div>
+<div id="mic-btn" onclick="startMic()">🎤</div>
+<div id="mic-status" style="position:fixed; bottom:70px; right:120px; font-size:13px;"></div>
 """, unsafe_allow_html=True)
 
 # ---------------- ORIGINAL CHAT INPUT ----------------
