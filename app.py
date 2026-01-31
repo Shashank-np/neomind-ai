@@ -2,36 +2,30 @@ import streamlit as st
 import requests
 from datetime import datetime
 import pytz
+import wikipedia
+from bs4 import BeautifulSoup
+from pydub import AudioSegment
+import speech_recognition as sr
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 
 # ---------------- PAGE CONFIG ----------------
-st.set_page_config(
-    page_title="NeoMind AI",
-    page_icon="🧠",
-    layout="wide"
-)
-
-st.toast("NeoMind AI is waking up 🧠", icon="⏳")
+st.set_page_config(page_title="NeoMind AI", page_icon="🧠", layout="wide")
 
 # ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ---------------- TIMEZONE (CACHED) ----------------
-@st.cache_data(ttl=3600)
+# ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
-        res = requests.get("https://ipapi.co/json/", timeout=3).json()
+        res = requests.get("https://ipapi.co/json/", timeout=5).json()
         return pytz.timezone(res.get("timezone", "UTC"))
     except:
         return pytz.UTC
 
-if "tz" not in st.session_state:
-    st.session_state.tz = get_timezone()
-
-tz = st.session_state.tz
+tz = get_timezone()
 
 # ---------------- SMART ANSWERS ----------------
 def smart_answer(prompt):
@@ -49,35 +43,26 @@ def smart_answer(prompt):
 # ---------------- WEB SCRAPING ----------------
 def web_scrape_summary(query):
     try:
-        from bs4 import BeautifulSoup
-
         url = f"https://www.google.com/search?q={query}"
         headers = {"User-Agent": "Mozilla/5.0"}
         res = requests.get(url, headers=headers, timeout=5)
-
         soup = BeautifulSoup(res.text, "html.parser")
         snippet = soup.find("div", class_="BNeawe s3v9rd AP7Wnd")
-
         if snippet:
             return f"🌐 **From the web:**\n\n{snippet.text}"
     except:
         pass
-
     return None
 
 # ---------------- IMAGE + WIKI ----------------
 def image_info_response(query):
     if "image" not in query.lower():
         return None
-
     try:
-        import wikipedia
-
         topic = query.replace("image", "").strip()
         wikipedia.set_lang("en")
         page = wikipedia.page(topic, auto_suggest=True)
         summary = wikipedia.summary(page.title, sentences=2)
-
         return f"🖼️ **{page.title}**\n\n{summary}"
     except:
         return None
@@ -85,7 +70,6 @@ def image_info_response(query):
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
-
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
@@ -94,7 +78,6 @@ with st.sidebar:
 
     st.divider()
     st.subheader("🆘 Feedback")
-
     feedback = st.text_area("Share your feedback")
 
     if st.button("Send Feedback"):
@@ -108,24 +91,16 @@ with st.sidebar:
                 st.success("Feedback sent")
             except:
                 st.error("Failed to send feedback")
-        else:
-            st.warning("Please write feedback")
-
-    st.divider()
-    st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
 llm = ChatGroq(
     model="llama-3.1-8b-instant",
     api_key=st.secrets["GROQ_API_KEY"],
-    temperature=temperature
+    temperature=temperature,
 )
 
-# ---------------- UI HEADER ----------------
-st.markdown(
-    "<h1 style='text-align:center'>💬 NeoMind AI</h1>",
-    unsafe_allow_html=True
-)
+# ---------------- CHAT UI ----------------
+st.markdown("<h1 style='text-align:center'>💬 NeoMind AI</h1>", unsafe_allow_html=True)
 
 # ---------------- TEXT INPUT ----------------
 prompt = st.text_input("Ask NeoMind AI anything...")
@@ -133,43 +108,38 @@ prompt = st.text_input("Ask NeoMind AI anything...")
 if prompt:
     st.session_state.messages.append(HumanMessage(content=prompt))
 
-# ---------------- VOICE INPUT (UPLOAD) ----------------
-st.markdown("### 🎙️ Voice Input (WAV only)")
+# ---------------- VOICE INPUT ----------------
+st.markdown("### 🎙️ Voice Input")
 
-audio_file = st.file_uploader("Upload your voice", type=["wav"])
+audio_file = st.file_uploader("Upload WAV audio", type=["wav"])
 
 if audio_file:
-    try:
-        import speech_recognition as sr
+    recognizer = sr.Recognizer()
 
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(audio_file) as source:
+    with st.spinner("Listening..."):
+        audio = sr.AudioFile(audio_file)
+        with audio as source:
             audio_data = recognizer.record(source)
 
-        transcript = recognizer.recognize_google(audio_data)
+        try:
+            transcript = recognizer.recognize_google(audio_data)
+            st.success(f"You said: {transcript}")
+            st.session_state.messages.append(HumanMessage(content=transcript))
+        except:
+            st.error("Could not understand audio")
 
-        st.success(f"You said: {transcript}")
-        st.session_state.messages.append(
-            HumanMessage(content=transcript)
-        )
-
-    except:
-        st.error("Could not understand the audio")
-
-# ---------------- CHAT RESPONSE ----------------
+# ---------------- CHAT HANDLER ----------------
 if st.session_state.messages:
-    last_input = st.session_state.messages[-1].content
+    last_user_msg = st.session_state.messages[-1].content
 
     answer = (
-        smart_answer(last_input)
-        or image_info_response(last_input)
-        or web_scrape_summary(last_input)
+        smart_answer(last_user_msg)
+        or image_info_response(last_user_msg)
+        or web_scrape_summary(last_user_msg)
     )
 
     if not answer:
         answer = llm.invoke(st.session_state.messages).content
 
     st.markdown(answer)
-    st.session_state.messages.append(
-        AIMessage(content=answer)
-    )
+    st.session_state.messages.append(AIMessage(content=answer))
