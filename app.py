@@ -35,7 +35,7 @@ section[data-testid="stAudioInput"] audio {
     height: 26px !important;
 }
 
-/* Sticky feel container */
+/* Sticky input area */
 .input-zone {
     position: sticky;
     bottom: 0;
@@ -85,12 +85,38 @@ def smart_answer(prompt):
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
+
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.processed_audio = set()
         st.rerun()
+
+    st.divider()
+
+    # ---------- FEEDBACK (FIXED) ----------
+    st.subheader("🆘 Feedback")
+
+    feedback_text = st.text_area(
+        label="Your feedback",
+        placeholder="Tell us what you like or what we can improve…",
+        height=90
+    )
+
+    if st.button("📨 Send Feedback"):
+        if feedback_text.strip():
+            try:
+                requests.post(
+                    "https://formspree.io/f/xblanbjk",
+                    data={"feedback": feedback_text},
+                    timeout=5
+                )
+                st.success("✅ Thanks for your feedback!")
+            except:
+                st.error("❌ Failed to send feedback. Try again.")
+        else:
+            st.warning("⚠️ Please write something before sending.")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -103,7 +129,10 @@ llm = ChatGroq(
 )
 
 # ---------------- HEADER ----------------
-st.markdown("<h1 style='text-align:center'>💬 NeoMind AI</h1>", unsafe_allow_html=True)
+st.markdown(
+    "<h1 style='text-align:center'>💬 NeoMind AI</h1>",
+    unsafe_allow_html=True
+)
 
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
@@ -114,7 +143,7 @@ for msg in st.session_state.messages:
 # ================= INPUT ZONE =================
 st.markdown('<div class="input-zone">', unsafe_allow_html=True)
 
-# ---- Voice input (compact & single-run) ----
+# ---- Voice input (compact + safe) ----
 audio = st.audio_input("🎙️", label_visibility="collapsed")
 
 if audio:
@@ -147,9 +176,9 @@ if audio:
             st.rerun()
 
         except:
-            pass  # ❌ No repeated error spam
+            pass  # no repeated error spam
 
-# ---- Chat input (arrow stays) ----
+# ---- Text input with arrow ----
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
