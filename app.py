@@ -2,6 +2,8 @@ import streamlit as st
 import requests
 from datetime import datetime
 import pytz
+import tempfile
+from gtts import gTTS
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
@@ -17,20 +19,10 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-/* Chat message container look */
+/* Chat message style */
 section[data-testid="stChatMessage"] {
-    background-color: #ffffff;
     border-radius: 12px;
     padding: 12px;
-    margin-bottom: 10px;
-}
-
-/* Audio input styling */
-section[data-testid="stAudioInput"] {
-    border-radius: 12px;
-    background-color: #f9fafb;
-    padding: 10px;
-    border: 1px solid #e0e0e0;
 }
 
 /* Remove footer */
@@ -43,7 +35,7 @@ footer {visibility: hidden;}
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ---------------- TIMEZONE (CACHED) ----------------
+# ---------------- TIMEZONE ----------------
 @st.cache_data(ttl=3600)
 def get_timezone():
     try:
@@ -60,17 +52,16 @@ def smart_answer(prompt):
     now = datetime.now(tz)
 
     if text in ["time", "current time", "what is the time"]:
-        return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
+        return f"⏰ Current time: {now.strftime('%I:%M %p')}"
 
     if "today" in text:
-        return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
+        return f"📅 Today: {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
     return None
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
-
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
@@ -78,8 +69,8 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
-
     st.subheader("🆘 Feedback")
+
     feedback = st.text_area(
         "Tell us what you think",
         placeholder="Your feedback helps us improve NeoMind AI…",
@@ -111,47 +102,27 @@ llm = ChatGroq(
 )
 
 # ---------------- HEADER ----------------
-st.markdown(
-    "<h1 style='text-align:center'>💬 NeoMind AI</h1>",
-    unsafe_allow_html=True
-)
+st.markdown("<h1 style='text-align:center'>💬 NeoMind AI</h1>", unsafe_allow_html=True)
 
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
     role = "user" if isinstance(msg, HumanMessage) else "assistant"
+
     with st.chat_message(role):
         st.markdown(msg.content)
 
-# ---------------- VOICE INPUT ----------------
-st.markdown("### 🎙️ Voice Input")
-audio_bytes = st.audio_input("Click mic and speak")
+        # 🔊 Voice for AI messages
+        if role == "assistant":
+            tts = gTTS(msg.content)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+                tts.save(fp.name)
+                st.audio(fp.name)
 
-if audio_bytes:
-    try:
-        import speech_recognition as sr
-
-        recognizer = sr.Recognizer()
-        with sr.AudioFile(audio_bytes) as source:
-            audio_data = recognizer.record(source)
-
-        transcript = recognizer.recognize_google(audio_data)
-
-        with st.chat_message("user"):
-            st.markdown(transcript)
-
-        st.session_state.messages.append(
-            HumanMessage(content=transcript)
-        )
-    except:
-        st.error("Sorry, I couldn't understand your voice.")
-
-# ---------------- CHAT INPUT (BEST FEATURE FROM SECOND CODE) ----------------
+# ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
-    st.session_state.messages.append(
-        HumanMessage(content=prompt)
-    )
+    st.session_state.messages.append(HumanMessage(content=prompt))
 
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -162,6 +133,11 @@ if prompt:
             answer = llm.invoke(st.session_state.messages).content
 
         st.markdown(answer)
-        st.session_state.messages.append(
-            AIMessage(content=answer)
-        )
+
+        # 🔊 Generate voice for AI reply
+        tts = gTTS(answer)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+            tts.save(fp.name)
+            st.audio(fp.name)
+
+        st.session_state.messages.append(AIMessage(content=answer))
