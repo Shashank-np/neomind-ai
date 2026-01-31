@@ -58,7 +58,7 @@ with st.sidebar:
 
     st.divider()
 
-    # -------- FEEDBACK BOX (UPDATED) --------
+    # -------- FEEDBACK BOX --------
     st.subheader("🆘 Feedback")
 
     feedback_text = st.text_area(
@@ -72,17 +72,14 @@ with st.sidebar:
             try:
                 requests.post(
                     "https://formspree.io/f/xblanbjk",
-                    data={
-                        "feedback": feedback_text,
-                        "source": "NeoMind AI App"
-                    },
+                    data={"feedback": feedback_text},
                     timeout=5
                 )
-                st.success("✅ Feedback sent successfully!")
+                st.success("✅ Feedback sent!")
             except:
-                st.error("❌ Failed to send feedback. Please try again.")
+                st.error("❌ Failed to send feedback")
         else:
-            st.warning("⚠️ Please write some feedback before sending.")
+            st.warning("⚠️ Please write feedback")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -100,8 +97,23 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ---------------- TEXT INPUT ----------------
-prompt = st.text_input("Ask NeoMind AI anything...")
+# ---------------- INPUT STYLE FIX ----------------
+st.markdown("""
+<style>
+textarea {
+    width: 100% !important;
+    min-height: 70px !important;
+    font-size: 16px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- TEXT INPUT (FIXED SIZE) ----------------
+prompt = st.text_area(
+    "Ask NeoMind AI anything...",
+    placeholder="Type your message here…",
+    height=70
+)
 
 if prompt:
     st.session_state.messages.append(
