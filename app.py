@@ -85,7 +85,11 @@ with st.sidebar:
     st.divider()
     st.subheader("🆘 Feedback")
 
-    feedback = st.text_area("Share your feedback", placeholder="Tell us what to improve...")
+    feedback = st.text_area(
+        "Share your feedback",
+        placeholder="Tell us what to improve..."
+    )
+
     if st.button("Send Feedback"):
         if feedback.strip():
             try:
@@ -118,61 +122,7 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
-# ---------------- VOICE SCRIPT ----------------
-st.markdown("""
-<script>
-let recognition;
-
-function startMic() {
-    if (!('webkitSpeechRecognition' in window)) {
-        alert("Speech recognition not supported in this browser");
-        return;
-    }
-
-    recognition = new webkitSpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    const status = document.getElementById("mic-status");
-    status.innerText = "🎤 Listening...";
-
-    recognition.onresult = (event) => {
-        let text = "";
-        for (let i = 0; i < event.results.length; i++) {
-            text += event.results[i][0].transcript + " ";
-        }
-        const textarea = window.parent.document.querySelector("textarea");
-        if (textarea) {
-            textarea.value = text.trim();
-            textarea.dispatchEvent(new Event("input", { bubbles: true }));
-        }
-    };
-
-    recognition.onend = () => {
-        status.innerText = "";
-    };
-
-    recognition.start();
-}
-</script>
-""", unsafe_allow_html=True)
-
-# ---------------- MIC ICON (OUTSIDE INPUT – RIGHT SIDE) ----------------
-st.markdown("""
-<style>
-#mic-outside {
-    position: fixed;
-    bottom: 32px;
-    right: 24px;
-    font-size: 22px;
-    cursor: pointer;
-    z-index: 1000;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------- ORIGINAL INPUT (UNCHANGED) ----------------
+# ---------------- ORIGINAL INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything...")
 
 # ---------------- CHAT HANDLER ----------------
@@ -183,12 +133,14 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        answer = smart_answer(prompt) or image_info_response(prompt) or web_scrape_summary(prompt)
+        answer = (
+            smart_answer(prompt)
+            or image_info_response(prompt)
+            or web_scrape_summary(prompt)
+        )
+
         if not answer:
             answer = llm.invoke(st.session_state.messages).content
 
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
-
-
-
