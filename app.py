@@ -1,9 +1,13 @@
 import streamlit as st
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 import pytz
 import wikipedia
 from bs4 import BeautifulSoup
+import io
+
+import speech_recognition as sr
+from streamlit_mic_recorder import mic_recorder
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
@@ -29,10 +33,23 @@ def get_timezone():
 
 tz = get_timezone()
 
+# ---------------- SPEECH TO TEXT ----------------
+def speech_to_text(audio_bytes):
+    recognizer = sr.Recognizer()
+    audio_file = sr.AudioFile(io.BytesIO(audio_bytes))
+
+    with audio_file as source:
+        audio = recognizer.record(source)
+
+    try:
+        return recognizer.recognize_google(audio)
+    except:
+        return ""
+
 # ---------------- SMART ANSWERS ----------------
 def smart_answer(prompt):
     text = prompt.lower().strip()
-    now = datetime.today().astimezone(tz)
+    now = datetime.now(tz)
 
     if text in ["time", "current time", "what is the time"]:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
@@ -42,12 +59,12 @@ def smart_answer(prompt):
 
     return None
 
-# ---------------- WEB SCRAPING (SAFE) ----------------
+# ---------------- WEB SCRAPING ----------------
 def web_scrape_summary(query):
     try:
-        search_url = f"https://www.google.com/search?q={query}"
+        url = f"https://www.google.com/search?q={query}"
         headers = {"User-Agent": "Mozilla/5.0"}
-        res = requests.get(search_url, headers=headers, timeout=5)
+        res = requests.get(url, headers=headers, timeout=5)
 
         soup = BeautifulSoup(res.text, "html.parser")
         snippet = soup.find("div", class_="BNeawe s3v9rd AP7Wnd")
@@ -115,7 +132,7 @@ with st.sidebar:
             except:
                 st.error("❌ Failed to send feedback.")
         else:
-            st.warning("⚠️ Please write some feedback before sending.")
+            st.warning("⚠️ Please write feedback first.")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -135,7 +152,25 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
-prompt = st.chat_input("Ask NeoMind AI anything…")
+# ---------------- INPUT + MIC ----------------
+col1, col2 = st.columns([0.9, 0.1])
+
+with col1:
+    prompt = st.chat_input("Ask NeoMind AI anything…")
+
+with col2:
+    audio = mic_recorder(
+        start_prompt="🎤",
+        stop_prompt="⏹️",
+        just_once=True,
+        key="mic"
+    )
+
+if audio and "bytes" in audio:
+    voice_text = speech_to_text(audio["bytes"])
+    if voice_text:
+        prompt = voice_text
+        st.toast(f"🎙️ You said: {voice_text}")
 
 # ---------------- CHAT HANDLER ----------------
 if prompt:
@@ -153,14 +188,12 @@ if prompt:
         if not answer:
             answer = web_scrape_summary(prompt)
 
-        # ---- SAFE LLM CALL ----
         if not answer:
             try:
                 answer = llm.invoke(st.session_state.messages).content
             except Exception:
                 answer = (
                     "⚠️ **Maximum chat limit reached.**\n\n"
-                    "This usually happens when the conversation becomes too long.\n\n"
                     "👉 Please click **Clear Chat** and try again."
                 )
 
