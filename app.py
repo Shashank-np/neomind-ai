@@ -1,9 +1,9 @@
-
-
 import streamlit as st
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 import pytz
+import wikipedia
+from bs4 import BeautifulSoup
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
@@ -19,106 +19,77 @@ st.set_page_config(
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
-
-# ---------------- THEME COLORS ----------------
-if st.session_state.dark_mode:
-    BG_MAIN = "#0f172a"
-    BG_SIDEBAR = "#020617"
-    BG_CARD = "#020617"
-    TEXT_COLOR = "#ffffff"
-    BORDER = "#334155"
-    PLACEHOLDER = "#ffffff"
-    SEND_BG = "#1e293b"
-else:
-    BG_MAIN = "#e6f7ff"
-    BG_SIDEBAR = "#d9f0ff"
-    BG_CARD = "#ffffff"
-    TEXT_COLOR = "#000000"
-    BORDER = "#aaccee"
-    PLACEHOLDER = "#5b7fa3"
-    SEND_BG = "#ffffff"
-
+if "voice_text" not in st.session_state:
+    st.session_state.voice_text = ""
 
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
-        res = requests.get("https://ipapi.co/json/").json()
+        res = requests.get("https://ipapi.co/json/", timeout=5).json()
         return pytz.timezone(res.get("timezone", "UTC"))
     except:
         return pytz.UTC
 
 tz = get_timezone()
 
-# ---------------- SMART LOGIC ----------------
+# ---------------- SMART ANSWERS ----------------
 def smart_answer(prompt):
     text = prompt.lower().strip()
+    now = datetime.now(tz)
 
-    # use today() instead of now()
-    now = datetime.today().astimezone(tz)
-
-    # Exact time questions ONLY
-    time_questions = [
-        "time",
-        "what is time",
-        "what's time",
-        "current time",
-        "what is the time",
-        "time?",
-        "time please",
-        "tell time",
-        "show time",
-    ]
-
-    # Check exact match
-    if text in time_questions:
+    if text in ["time", "current time", "what is the time"]:
         return f"⏰ **Current time:** {now.strftime('%I:%M %p')}"
 
-    # Other keywords shouldn't trigger time (like time complexity)
-    if "creator full name" in text or "full name of creator" in text:
-        return "**Shashank N P**"
-    if "creator" in text or "who created" in text or "who made" in text:
-        return "**Shashank**"
-    if "your name" in text or "what is your name" in text:
-        return "**Rossie**"
-
-    if "tomorrow" in text:
-        tmr = now + timedelta(days=1)
-        return f"📅 **Tomorrow:** {tmr.strftime('%d %B %Y')} ({tmr.strftime('%A')})"
-
-    if "today" in text or text == "date":
+    if "today" in text:
         return f"📅 **Today:** {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
 
     return None
 
+# ---------------- WEB SCRAPING ----------------
+def web_scrape_summary(query):
+    try:
+        url = f"https://www.google.com/search?q={query}"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        res = requests.get(url, headers=headers, timeout=5)
+
+        soup = BeautifulSoup(res.text, "html.parser")
+        snippet = soup.find("div", class_="BNeawe s3v9rd AP7Wnd")
+
+        if snippet:
+            return f"🌐 **From the web:**\n\n{snippet.text}"
+    except:
+        pass
+    return None
+
+# ---------------- IMAGE + WIKI ----------------
+def image_info_response(query):
+    if "image" not in query.lower():
+        return None
+
+    try:
+        topic = query.replace("image", "").strip()
+        wikipedia.set_lang("en")
+        page = wikipedia.page(topic, auto_suggest=True)
+        summary = wikipedia.summary(page.title, sentences=2)
+
+        return f"""
+### 🖼️ **{page.title}**
+
+{summary}
+
+🔗 https://commons.wikimedia.org/wiki/{page.title.replace(" ", "_")}
+"""
+    except:
+        return "❌ No image info found."
+
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
-    st.caption("Text-based AI Assistant")
-
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🧹 Clear Chat"):
-            st.session_state.messages = []
-            st.rerun()
-    with col2:
-        st.toggle("🌙 Dark Mode", key="dark_mode")
-
-    st.divider()
-    st.subheader("🆘 Help & Feedback")
-
-    feedback = st.text_area("Share your feedback or suggestions")
-    if st.button("Send Feedback"):
-        if feedback.strip():
-            requests.post(
-                "https://formspree.io/f/xblanbjk",
-                data={"message": feedback},
-                headers={"Accept": "application/json"}
-            )
-            st.success("✅ Feedback sent!")
+    if st.button("🧹 Clear Chat"):
+        st.session_state.messages = []
+        st.rerun()
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -130,21 +101,48 @@ llm = ChatGroq(
     temperature=temperature,
 )
 
-# ---------------- HERO ----------------
-st.markdown("""
-<div style="margin-top:30vh;text-align:center;">
-<h1>💬 NeoMind AI</h1>
-<p>Ask. Think. Generate.</p>
-</div>
-""", unsafe_allow_html=True)
+# ---------------- UI ----------------
+st.markdown("<h1 style='text-align:center'>💬 NeoMind AI</h1>", unsafe_allow_html=True)
 
-# ---------------- CHAT HISTORY ----------------
-for m in st.session_state.messages:
-    with st.chat_message("user" if isinstance(m, HumanMessage) else "assistant"):
-        st.markdown(m.content)
+for msg in st.session_state.messages:
+    role = "user" if isinstance(msg, HumanMessage) else "assistant"
+    with st.chat_message(role):
+        st.markdown(msg.content)
 
-# ---------------- INPUT ----------------
-prompt = st.chat_input("Ask NeoMind AI anything…")
+# ---------------- MIC (BROWSER BASED) ----------------
+st.markdown(
+    """
+    <script>
+    const startDictation = () => {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-US';
+        recognition.start();
+
+        recognition.onresult = function(event) {
+            const text = event.results[0][0].transcript;
+            const input = window.parent.document.querySelector('textarea');
+            input.value = text;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }
+    </script>
+    """,
+    unsafe_allow_html=True
+)
+
+col1, col2 = st.columns([0.9, 0.1])
+
+with col1:
+    prompt = st.chat_input("Ask NeoMind AI anything…")
+
+with col2:
+    st.markdown(
+        """
+        <button onclick="startDictation()" 
+        style="font-size:22px; padding:6px; cursor:pointer;">🎤</button>
+        """,
+        unsafe_allow_html=True
+    )
 
 # ---------------- CHAT HANDLER ----------------
 if prompt:
@@ -154,12 +152,19 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        answer = smart_answer(prompt) or llm.invoke(st.session_state.messages).content
+        answer = smart_answer(prompt)
+
+        if not answer:
+            answer = image_info_response(prompt)
+
+        if not answer:
+            answer = web_scrape_summary(prompt)
+
+        if not answer:
+            try:
+                answer = llm.invoke(st.session_state.messages).content
+            except:
+                answer = "⚠️ Please clear chat and try again."
+
         st.markdown(answer)
         st.session_state.messages.append(AIMessage(content=answer))
-
-
-
-
-
-
