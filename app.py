@@ -19,9 +19,6 @@ st.set_page_config(
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "input_text" not in st.session_state:
-    st.session_state.input_text = ""
-
 # ---------------- USER TIMEZONE ----------------
 def get_timezone():
     try:
@@ -103,11 +100,10 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
-# ---------------- VOICE SCRIPT ----------------
+# ---------------- MIC OVERLAY SCRIPT ----------------
 st.markdown("""
 <script>
 let recognition;
-let listening = false;
 
 function startMic() {
     if (!('webkitSpeechRecognition' in window)) {
@@ -120,24 +116,23 @@ function startMic() {
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
-    recognition.onstart = () => {
-        listening = true;
-        document.getElementById("micStatus").innerText = "🎤 Listening...";
-    };
+    const status = document.getElementById("mic-status");
+    status.innerText = "🎤 Listening...";
 
-    recognition.onresult = (event) => {
+    recognition.onresult = function(event) {
         let text = "";
         for (let i = 0; i < event.results.length; i++) {
             text += event.results[i][0].transcript + " ";
         }
-        const textarea = document.getElementById("neoInput");
-        textarea.value = text.trim();
-        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+        const textarea = window.parent.document.querySelector("textarea");
+        if (textarea) {
+            textarea.value = text.trim();
+            textarea.dispatchEvent(new Event("input", { bubbles: true }));
+        }
     };
 
     recognition.onend = () => {
-        listening = false;
-        document.getElementById("micStatus").innerText = "";
+        status.innerText = "";
     };
 
     recognition.start();
@@ -145,54 +140,25 @@ function startMic() {
 </script>
 """, unsafe_allow_html=True)
 
-# ---------------- INPUT BAR (UI SAME) ----------------
+# ---------------- MIC BUTTON (FLOATING, UI SAFE) ----------------
 st.markdown("""
 <style>
-.chat-bar {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-}
-.chat-bar textarea {
-    width: 100%;
-    height: 42px;
-    border-radius: 12px;
-    padding: 10px;
-    border: 1px solid #444;
-    background-color: #1e1e1e;
-    color: white;
-}
-.chat-btn {
-    height: 42px;
-    width: 42px;
-    border-radius: 50%;
-    border: none;
-    font-size: 18px;
+#mic-float {
+    position: fixed;
+    bottom: 26px;
+    right: 90px;
+    z-index: 1000;
+    font-size: 22px;
     cursor: pointer;
 }
 </style>
 
-<div class="chat-bar">
-    <textarea id="neoInput" placeholder="Ask NeoMind AI anything..."></textarea>
-    <button class="chat-btn" onclick="startMic()">🎤</button>
-    <button class="chat-btn" onclick="sendText()">⬆️</button>
-</div>
-<div id="micStatus" style="margin-top:6px; font-size:14px;"></div>
-
-<script>
-function sendText() {
-    const text = document.getElementById("neoInput").value;
-    const streamlitInput = window.parent.document.querySelector('input[data-testid="stTextInput"]');
-    if (streamlitInput) {
-        streamlitInput.value = text;
-        streamlitInput.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-}
-</script>
+<div id="mic-float" onclick="startMic()">🎤</div>
+<div id="mic-status" style="position:fixed; bottom:65px; right:80px; font-size:14px;"></div>
 """, unsafe_allow_html=True)
 
-# ---------------- HIDDEN INPUT ----------------
-prompt = st.text_input("", key="hidden_input", label_visibility="collapsed")
+# ---------------- ORIGINAL CHAT INPUT (UNCHANGED) ----------------
+prompt = st.chat_input("Ask NeoMind AI anything...")
 
 # ---------------- CHAT HANDLER ----------------
 if prompt:
