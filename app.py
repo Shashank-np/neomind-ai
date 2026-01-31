@@ -17,38 +17,15 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-/* Chat input style */
-textarea {
-    width: 100% !important;
-    min-height: 90px !important;
-    resize: none !important;
-    font-size: 16px !important;
-    padding: 14px 52px 14px 14px !important;
-    border-radius: 12px !important;
-    border: 1px solid #e0e0e0 !important;
-    background-color: #f9fafb !important;
+/* Chat message container look */
+section[data-testid="stChatMessage"] {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
 }
 
-/* Send button style */
-.send-btn button {
-    position: relative;
-    margin-top: -65px;
-    float: right;
-    margin-right: 14px;
-    background-color: #4f46e5;
-    color: white;
-    border-radius: 50%;
-    height: 42px;
-    width: 42px;
-    border: none;
-    font-size: 18px;
-}
-
-.send-btn button:hover {
-    background-color: #4338ca;
-}
-
-/* Audio input box */
+/* Audio input styling */
 section[data-testid="stAudioInput"] {
     border-radius: 12px;
     background-color: #f9fafb;
@@ -56,7 +33,7 @@ section[data-testid="stAudioInput"] {
     border: 1px solid #e0e0e0;
 }
 
-/* Remove Streamlit footer */
+/* Remove footer */
 footer {visibility: hidden;}
 
 </style>
@@ -66,7 +43,7 @@ footer {visibility: hidden;}
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ---------------- TIMEZONE ----------------
+# ---------------- TIMEZONE (CACHED) ----------------
 @st.cache_data(ttl=3600)
 def get_timezone():
     try:
@@ -139,24 +116,11 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ---------------- CHAT INPUT + SEND BUTTON ----------------
-prompt = st.text_area(
-    "Ask NeoMind AI anything…",
-    placeholder="Type your message here…",
-    key="chat_input"
-)
-
-send = st.container()
-with send:
-    st.markdown('<div class="send-btn">', unsafe_allow_html=True)
-    send_clicked = st.button("➤", key="send_btn")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-if send_clicked and prompt.strip():
-    st.session_state.messages.append(
-        HumanMessage(content=prompt)
-    )
-    st.session_state.chat_input = ""
+# ---------------- CHAT HISTORY ----------------
+for msg in st.session_state.messages:
+    role = "user" if isinstance(msg, HumanMessage) else "assistant"
+    with st.chat_message(role):
+        st.markdown(msg.content)
 
 # ---------------- VOICE INPUT ----------------
 st.markdown("### 🎙️ Voice Input")
@@ -172,22 +136,32 @@ if audio_bytes:
 
         transcript = recognizer.recognize_google(audio_data)
 
-        st.success(f"You said: {transcript}")
+        with st.chat_message("user"):
+            st.markdown(transcript)
+
         st.session_state.messages.append(
             HumanMessage(content=transcript)
         )
     except:
         st.error("Sorry, I couldn't understand your voice.")
 
-# ---------------- RESPONSE ----------------
-if st.session_state.messages:
-    last_input = st.session_state.messages[-1].content
+# ---------------- CHAT INPUT (BEST FEATURE FROM SECOND CODE) ----------------
+prompt = st.chat_input("Ask NeoMind AI anything…")
 
-    answer = smart_answer(last_input)
-    if not answer:
-        answer = llm.invoke(st.session_state.messages).content
-
-    st.markdown(answer)
+if prompt:
     st.session_state.messages.append(
-        AIMessage(content=answer)
+        HumanMessage(content=prompt)
     )
+
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        answer = smart_answer(prompt)
+        if not answer:
+            answer = llm.invoke(st.session_state.messages).content
+
+        st.markdown(answer)
+        st.session_state.messages.append(
+            AIMessage(content=answer)
+        )
