@@ -122,31 +122,56 @@ for msg in st.session_state.messages:
     with st.chat_message("user" if isinstance(msg, HumanMessage) else "assistant"):
         st.markdown(msg.content)
 
-# ---------------- MIC SCRIPT ----------------
+# ---------------- FIXED MIC SCRIPT ----------------
 st.markdown("""
 <script>
 let recognition;
-function startMic(){
-  if(!('webkitSpeechRecognition' in window)){
-    alert("Speech Recognition not supported");
+let listening = false;
+
+function startMic() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Speech recognition not supported. Use Chrome or Edge.");
     return;
   }
-  recognition = new webkitSpeechRecognition();
+
+  if (listening && recognition) {
+    recognition.stop();
+    listening = false;
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
   recognition.continuous = true;
   recognition.interimResults = true;
-  recognition.lang = "en-US";
+
+  recognition.onstart = () => {
+    listening = true;
+  };
 
   recognition.onresult = (event) => {
     let text = "";
-    for(let i=0;i<event.results.length;i++){
+    for (let i = event.resultIndex; i < event.results.length; i++) {
       text += event.results[i][0].transcript + " ";
     }
     const textarea = window.parent.document.querySelector("textarea");
-    if(textarea){
+    if (textarea) {
       textarea.value = text.trim();
-      textarea.dispatchEvent(new Event("input",{bubbles:true}));
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
     }
   };
+
+  recognition.onerror = (e) => {
+    console.error("Mic error:", e);
+    recognition.stop();
+    listening = false;
+  };
+
+  recognition.onend = () => {
+    listening = false;
+  };
+
   recognition.start();
 }
 </script>
