@@ -118,14 +118,14 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
-# ---------------- MIC SCRIPT ----------------
+# ---------------- VOICE SCRIPT ----------------
 st.markdown("""
 <script>
 let recognition;
 
 function startMic() {
     if (!('webkitSpeechRecognition' in window)) {
-        alert("Speech recognition not supported");
+        alert("Speech recognition not supported in this browser");
         return;
     }
 
@@ -158,24 +158,24 @@ function startMic() {
 </script>
 """, unsafe_allow_html=True)
 
-# ---------------- MIC ICON (CHATGPT STYLE) ----------------
+# ---------------- MIC ICON (OUTSIDE INPUT – RIGHT SIDE) ----------------
 st.markdown("""
 <style>
-#mic-btn {
+#mic-outside {
     position: fixed;
-    bottom: 34px;
-    right: 130px;   /* aligns next to arrow */
-    font-size: 20px;
+    bottom: 32px;
+    right: 24px;
+    font-size: 22px;
     cursor: pointer;
     z-index: 1000;
 }
 </style>
 
-<div id="mic-btn" onclick="startMic()">🎤</div>
-<div id="mic-status" style="position:fixed; bottom:70px; right:120px; font-size:13px;"></div>
+<div id="mic-outside" onclick="startMic()">🎤</div>
+<div id="mic-status" style="position:fixed; bottom:70px; right:20px; font-size:13px;"></div>
 """, unsafe_allow_html=True)
 
-# ---------------- ORIGINAL CHAT INPUT ----------------
+# ---------------- ORIGINAL INPUT (UNCHANGED) ----------------
 prompt = st.chat_input("Ask NeoMind AI anything...")
 
 # ---------------- CHAT HANDLER ----------------
@@ -187,7 +187,6 @@ if prompt:
 
     with st.chat_message("assistant"):
         answer = smart_answer(prompt) or image_info_response(prompt) or web_scrape_summary(prompt)
-
         if not answer:
             answer = llm.invoke(st.session_state.messages).content
 
