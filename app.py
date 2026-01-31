@@ -13,14 +13,36 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- BASIC STYLES ----------------
+# ---------------- STYLES ----------------
 st.markdown("""
 <style>
+
+/* Chat bubbles */
 section[data-testid="stChatMessage"] {
     border-radius: 12px;
     padding: 12px;
 }
+
+/* Compact voice input */
+section[data-testid="stAudioInput"] {
+    padding: 6px !important;
+    margin-bottom: 6px !important;
+    border-radius: 10px;
+}
+
+section[data-testid="stAudioInput"] label {
+    font-size: 13px !important;
+    margin-bottom: 4px !important;
+}
+
+/* Reduce waveform height */
+section[data-testid="stAudioInput"] audio {
+    height: 28px !important;
+}
+
+/* Remove footer */
 footer {visibility: hidden;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -107,14 +129,16 @@ for msg in st.session_state.messages:
         st.markdown(msg.content)
 
 # ==================================================
-# 🔽 INPUT AREA (VOICE + TEXT TOGETHER AT BOTTOM)
+# 🔽 INPUT AREA (COMPACT VOICE + TEXT)
 # ==================================================
-
 st.markdown("---")
-st.markdown("### 🎙️ Voice or Text Input")
 
-# ---- Voice input (adds user message only) ----
-audio = st.audio_input("Speak your message")
+st.markdown("**🎙️ Voice input**")
+
+audio = st.audio_input(
+    "Speak",
+    label_visibility="collapsed"
+)
 
 if audio:
     try:
@@ -126,12 +150,10 @@ if audio:
 
         transcript = recognizer.recognize_google(audio_data)
 
-        # Add as USER message
         st.session_state.messages.append(
             HumanMessage(content=transcript)
         )
 
-        # Generate AI response
         answer = smart_answer(transcript)
         if not answer:
             answer = llm.invoke(st.session_state.messages).content
@@ -145,7 +167,7 @@ if audio:
     except:
         st.error("Sorry, I couldn't understand your voice.")
 
-# ---- Text input with arrow ----
+# ---- Chat input with arrow (fixed) ----
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
