@@ -4,9 +4,9 @@ from datetime import datetime
 import pytz
 import tempfile
 
-from gtts import gTTS
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
+from gtts import gTTS
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -29,6 +29,9 @@ footer {visibility: hidden;}
 # ---------------- SESSION STATE ----------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+if "audio_cache" not in st.session_state:
+    st.session_state.audio_cache = {}  # msg_id -> audio_path
 
 # ---------------- TIMEZONE ----------------
 @st.cache_data(ttl=3600)
@@ -57,11 +60,11 @@ def smart_answer(prompt):
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.title("🧠 NeoMind AI")
-
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
+        st.session_state.audio_cache = {}
         st.rerun()
 
     st.divider()
@@ -100,20 +103,18 @@ llm = ChatGroq(
 # ---------------- HEADER ----------------
 st.markdown("<h1 style='text-align:center'>💬 NeoMind AI</h1>", unsafe_allow_html=True)
 
-# ---------------- CHAT HISTORY ----------------
-for msg in st.session_state.messages:
+# ---------------- CHAT HISTORY (FAST) ----------------
+for i, msg in enumerate(st.session_state.messages):
     role = "user" if isinstance(msg, HumanMessage) else "assistant"
 
     with st.chat_message(role):
         st.markdown(msg.content)
 
-        if role == "assistant":
-            tts = gTTS(msg.content)
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-                tts.save(fp.name)
-                st.audio(fp.name)
+        # 🔊 Play cached audio ONLY (no regeneration)
+        if role == "assistant" and i in st.session_state.audio_cache:
+            st.audio(st.session_state.audio_cache[i])
 
-# ---------------- CHAT INPUT (WITH ARROW) ----------------
+# ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
@@ -129,10 +130,11 @@ if prompt:
 
         st.markdown(answer)
 
-        # 🔊 Voice output for AI reply
+        # 🔊 Generate TTS ONCE for this message
         tts = gTTS(answer)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
             tts.save(fp.name)
             st.audio(fp.name)
+            st.session_state.audio_cache[len(st.session_state.messages)] = fp.name
 
         st.session_state.messages.append(AIMessage(content=answer))
