@@ -37,8 +37,8 @@ footer {visibility: hidden;}
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "input_text" not in st.session_state:
-    st.session_state.input_text = ""
+if "voice_text" not in st.session_state:
+    st.session_state.voice_text = ""
 
 if "processed_audio" not in st.session_state:
     st.session_state.processed_audio = set()
@@ -76,15 +76,11 @@ with st.sidebar:
 
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    # divider between creativity and voice (as you asked)
     st.divider()
 
     st.subheader("🎙️ Voice Input")
 
-    audio = st.audio_input(
-        "Speak",
-        label_visibility="collapsed"
-    )
+    audio = st.audio_input("Speak", label_visibility="collapsed")
 
     if audio:
         audio_hash = hashlib.md5(audio.getvalue()).hexdigest()
@@ -100,13 +96,13 @@ with st.sidebar:
                 with sr.AudioFile(audio) as source:
                     audio_data = recognizer.record(source)
 
-                transcript = recognizer.recognize_google(audio_data)
-
-                # ✅ ONLY update text box
-                st.session_state.input_text = transcript
+                st.session_state.voice_text = recognizer.recognize_google(audio_data)
 
             except:
                 st.session_state.voice_error = True
+
+    if st.session_state.voice_text:
+        st.success(f"Recognized: {st.session_state.voice_text}")
 
     if st.session_state.voice_error:
         st.warning("Couldn’t understand the voice. Please try again.")
@@ -152,21 +148,18 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
-# ---------------- TEXT INPUT (FINAL CONTROL) ----------------
-prompt = st.chat_input(
-    "Ask NeoMind AI anything…",
-    key="chat_box",
-    value=st.session_state.input_text
-)
+# ---------------- CHAT INPUT ----------------
+prompt = st.chat_input("Ask NeoMind AI anything…")
 
-if prompt:
-    st.session_state.input_text = ""  # clear box
+if prompt or st.session_state.voice_text:
+    user_text = prompt if prompt else st.session_state.voice_text
+    st.session_state.voice_text = ""
 
     st.session_state.messages.append(
-        HumanMessage(content=prompt)
+        HumanMessage(content=user_text)
     )
 
-    answer = smart_answer(prompt)
+    answer = smart_answer(user_text)
     if not answer:
         answer = llm.invoke(st.session_state.messages).content
 
