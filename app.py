@@ -24,10 +24,10 @@ section[data-testid="stChatMessage"] {
     padding: 12px;
 }
 
-/* Compact voice input */
+/* Compact voice input (sidebar) */
 section[data-testid="stAudioInput"] {
     padding: 4px !important;
-    margin: 0 0 6px 0 !important;
+    margin: 4px 0 !important;
     border-radius: 10px;
 }
 
@@ -86,20 +86,56 @@ def smart_answer(prompt):
 with st.sidebar:
     st.title("🧠 NeoMind AI")
 
+    # Creativity slider
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    if st.button("🧹 Clear Chat"):
-        st.session_state.messages = []
-        st.session_state.processed_audio = set()
-        st.rerun()
+    # -------- VOICE INPUT (SIDEBAR – MIDDLE) --------
+    st.markdown("### 🎙️ Voice Input")
+
+    audio = st.audio_input(
+        "Speak",
+        label_visibility="collapsed"
+    )
+
+    if audio:
+        audio_hash = hashlib.md5(audio.getvalue()).hexdigest()
+
+        if audio_hash not in st.session_state.processed_audio:
+            st.session_state.processed_audio.add(audio_hash)
+
+            try:
+                import speech_recognition as sr
+
+                recognizer = sr.Recognizer()
+                with sr.AudioFile(audio) as source:
+                    audio_data = recognizer.record(source)
+
+                transcript = recognizer.recognize_google(audio_data)
+
+                st.session_state.messages.append(
+                    HumanMessage(content=transcript)
+                )
+
+                answer = smart_answer(transcript)
+                if not answer:
+                    answer = llm.invoke(st.session_state.messages).content
+
+                st.session_state.messages.append(
+                    AIMessage(content=answer)
+                )
+
+                st.rerun()
+
+            except:
+                st.warning("Couldn’t understand the voice.")
 
     st.divider()
 
-    # ---------- FEEDBACK (FIXED) ----------
+    # -------- FEEDBACK --------
     st.subheader("🆘 Feedback")
 
     feedback_text = st.text_area(
-        label="Your feedback",
+        "Your feedback",
         placeholder="Tell us what you like or what we can improve…",
         height=90
     )
@@ -114,9 +150,9 @@ with st.sidebar:
                 )
                 st.success("✅ Thanks for your feedback!")
             except:
-                st.error("❌ Failed to send feedback. Try again.")
+                st.error("❌ Failed to send feedback.")
         else:
-            st.warning("⚠️ Please write something before sending.")
+            st.warning("⚠️ Please write something first.")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -140,45 +176,9 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
-# ================= INPUT ZONE =================
+# ================= TEXT INPUT (BOTTOM) =================
 st.markdown('<div class="input-zone">', unsafe_allow_html=True)
 
-# ---- Voice input (compact + safe) ----
-audio = st.audio_input("🎙️", label_visibility="collapsed")
-
-if audio:
-    audio_hash = hashlib.md5(audio.getvalue()).hexdigest()
-
-    if audio_hash not in st.session_state.processed_audio:
-        st.session_state.processed_audio.add(audio_hash)
-
-        try:
-            import speech_recognition as sr
-
-            recognizer = sr.Recognizer()
-            with sr.AudioFile(audio) as source:
-                audio_data = recognizer.record(source)
-
-            transcript = recognizer.recognize_google(audio_data)
-
-            st.session_state.messages.append(
-                HumanMessage(content=transcript)
-            )
-
-            answer = smart_answer(transcript)
-            if not answer:
-                answer = llm.invoke(st.session_state.messages).content
-
-            st.session_state.messages.append(
-                AIMessage(content=answer)
-            )
-
-            st.rerun()
-
-        except:
-            pass  # no repeated error spam
-
-# ---- Text input with arrow ----
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
