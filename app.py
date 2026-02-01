@@ -17,37 +17,19 @@ st.set_page_config(
 # ---------------- STYLES ----------------
 st.markdown("""
 <style>
-
-/* Chat bubbles */
 section[data-testid="stChatMessage"] {
     border-radius: 12px;
     padding: 12px;
 }
-
-/* Compact voice input (sidebar) */
 section[data-testid="stAudioInput"] {
     padding: 4px !important;
     margin: 4px 0 !important;
     border-radius: 10px;
 }
-
 section[data-testid="stAudioInput"] audio {
     height: 26px !important;
 }
-
-/* Sticky input area */
-.input-zone {
-    position: sticky;
-    bottom: 0;
-    background: white;
-    padding-top: 6px;
-    z-index: 10;
-    border-top: 1px solid #eee;
-}
-
-/* Hide footer */
 footer {visibility: hidden;}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -57,6 +39,12 @@ if "messages" not in st.session_state:
 
 if "processed_audio" not in st.session_state:
     st.session_state.processed_audio = set()
+
+if "voice_status" not in st.session_state:
+    st.session_state.voice_status = None  # success | error | None
+
+if "voice_last_text" not in st.session_state:
+    st.session_state.voice_last_text = None
 
 # ---------------- TIMEZONE ----------------
 @st.cache_data(ttl=3600)
@@ -86,16 +74,10 @@ def smart_answer(prompt):
 with st.sidebar:
     st.title("🧠 NeoMind AI")
 
-    # Creativity slider
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    # -------- VOICE INPUT (SIDEBAR – MIDDLE) --------
     st.markdown("### 🎙️ Voice Input")
-
-    audio = st.audio_input(
-        "Speak",
-        label_visibility="collapsed"
-    )
+    audio = st.audio_input("Speak", label_visibility="collapsed")
 
     if audio:
         audio_hash = hashlib.md5(audio.getvalue()).hexdigest()
@@ -105,12 +87,16 @@ with st.sidebar:
 
             try:
                 import speech_recognition as sr
-
                 recognizer = sr.Recognizer()
+
                 with sr.AudioFile(audio) as source:
                     audio_data = recognizer.record(source)
 
                 transcript = recognizer.recognize_google(audio_data)
+
+                # ✅ SUCCESS
+                st.session_state.voice_status = "success"
+                st.session_state.voice_last_text = transcript
 
                 st.session_state.messages.append(
                     HumanMessage(content=transcript)
@@ -127,32 +113,38 @@ with st.sidebar:
                 st.rerun()
 
             except:
-                st.warning("Couldn’t understand the voice.")
+                st.session_state.voice_status = "error"
+                st.session_state.voice_last_text = None
+
+    # ---- Voice status messages (clean) ----
+    if st.session_state.voice_status == "success":
+        st.success(f"You said: {st.session_state.voice_last_text}")
+
+    elif st.session_state.voice_status == "error":
+        st.warning("Couldn’t understand the voice. Please try again.")
 
     st.divider()
 
-    # -------- FEEDBACK --------
     st.subheader("🆘 Feedback")
-
-    feedback_text = st.text_area(
+    feedback = st.text_area(
         "Your feedback",
         placeholder="Tell us what you like or what we can improve…",
         height=90
     )
 
     if st.button("📨 Send Feedback"):
-        if feedback_text.strip():
+        if feedback.strip():
             try:
                 requests.post(
                     "https://formspree.io/f/xblanbjk",
-                    data={"feedback": feedback_text},
+                    data={"feedback": feedback},
                     timeout=5
                 )
-                st.success("✅ Thanks for your feedback!")
+                st.success("Thanks for your feedback!")
             except:
-                st.error("❌ Failed to send feedback.")
+                st.error("Failed to send feedback.")
         else:
-            st.warning("⚠️ Please write something first.")
+            st.warning("Please write something first.")
 
     st.divider()
     st.caption("Created by **Shashank N P**")
@@ -165,10 +157,7 @@ llm = ChatGroq(
 )
 
 # ---------------- HEADER ----------------
-st.markdown(
-    "<h1 style='text-align:center'>💬 NeoMind AI</h1>",
-    unsafe_allow_html=True
-)
+st.markdown("<h1 style='text-align:center'>💬 NeoMind AI</h1>", unsafe_allow_html=True)
 
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
@@ -176,9 +165,7 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
-# ================= TEXT INPUT (BOTTOM) =================
-st.markdown('<div class="input-zone">', unsafe_allow_html=True)
-
+# ---------------- TEXT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt:
@@ -195,5 +182,3 @@ if prompt:
     )
 
     st.rerun()
-
-st.markdown('</div>', unsafe_allow_html=True)
