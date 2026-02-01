@@ -4,6 +4,7 @@ from datetime import datetime
 import pytz
 import uuid
 import base64
+import json
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
@@ -18,18 +19,36 @@ st.set_page_config(
 # ---------------- STYLES ----------------
 st.markdown("""
 <style>
+/* Chat */
 section[data-testid="stChatMessage"] {
     border-radius: 12px;
     padding: 12px;
 }
+
+/* Compact sidebar inputs */
+.small-label label {
+    font-size: 13px !important;
+}
 section[data-testid="stAudioInput"] {
-    padding: 4px !important;
-    margin: 4px 0 !important;
-    border-radius: 10px;
+    padding: 2px !important;
+}
+section[data-testid="stFileUploader"] {
+    padding: 2px !important;
 }
 section[data-testid="stAudioInput"] audio {
-    height: 26px !important;
+    height: 24px !important;
 }
+
+/* Sticky footer text */
+.sidebar-footer {
+    position: sticky;
+    bottom: 0;
+    background: #f8f9fa;
+    padding-top: 8px;
+    font-size: 12px;
+    color: #666;
+}
+
 footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -40,9 +59,6 @@ if "messages" not in st.session_state:
 
 if "voice_text" not in st.session_state:
     st.session_state.voice_text = ""
-
-if "voice_error" not in st.session_state:
-    st.session_state.voice_error = False
 
 if "audio_key" not in st.session_state:
     st.session_state.audio_key = str(uuid.uuid4())
@@ -63,11 +79,11 @@ def smart_answer(prompt):
     text = prompt.lower().strip()
     now = datetime.now(tz)
 
-    if text in ["time", "current time", "what is the time"]:
+    if text in ["time", "current time"]:
         return f"⏰ Current time: {now.strftime('%I:%M %p')}"
 
     if "today" in text:
-        return f"📅 Today: {now.strftime('%d %B %Y')} ({now.strftime('%A')})"
+        return f"📅 Today: {now.strftime('%d %B %Y')}"
 
     return None
 
@@ -78,10 +94,12 @@ with st.sidebar:
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     st.divider()
-    st.subheader("🎙️ Voice Input")
+
+    # -------- VOICE INPUT --------
+    st.markdown("**🎙 Voice Input**", unsafe_allow_html=True)
 
     audio = st.audio_input(
-        "Speak",
+        "voice",
         key=st.session_state.audio_key,
         label_visibility="collapsed"
     )
@@ -89,72 +107,57 @@ with st.sidebar:
     if audio:
         try:
             import speech_recognition as sr
-
-            recognizer = sr.Recognizer()
+            r = sr.Recognizer()
             with sr.AudioFile(audio) as source:
-                audio_data = recognizer.record(source)
+                data = r.record(source)
 
-            transcript = recognizer.recognize_google(audio_data)
-
-            st.session_state.voice_text = transcript
-            st.session_state.voice_error = False
+            st.session_state.voice_text = r.recognize_google(data)
             st.session_state.audio_key = str(uuid.uuid4())
-
         except:
-            st.session_state.voice_error = True
-
-    if st.session_state.voice_error:
-        st.warning("Couldn’t understand the voice. Please try again.")
+            st.warning("Could not understand voice. Try again.")
 
     if st.session_state.voice_text:
         st.success(f"Recognized: {st.session_state.voice_text}")
 
-    # -------- IMAGE INPUT (NEW) --------
+    # -------- IMAGE INPUT --------
     st.divider()
-    st.subheader("🖼️ Image Input")
+    st.markdown("**🖼 Image Input**")
 
-    uploaded_image = st.file_uploader(
-        "Upload an image",
-        type=["jpg", "jpeg", "png"]
+    image_file = st.file_uploader(
+        "image",
+        type=["png", "jpg", "jpeg"],
+        label_visibility="collapsed"
     )
 
+    # -------- FEEDBACK --------
     st.divider()
+    st.markdown("**🆘 Feedback**")
 
-    st.subheader("🆘 Feedback")
     feedback = st.text_area(
-        "Your feedback",
-        placeholder="Tell us what you like or what we can improve…",
-        height=90
+        "feedback",
+        placeholder="Tell us what we can improve…",
+        height=70,
+        label_visibility="collapsed"
     )
 
     if st.button("📨 Send Feedback"):
         if feedback.strip():
-            try:
-                requests.post(
-                    "https://formspree.io/f/xblanbjk",
-                    data={"feedback": feedback},
-                    timeout=5
-                )
-                st.success("Thanks for your feedback!")
-            except:
-                st.error("Failed to send feedback.")
-        else:
-            st.warning("Please write something first.")
+            requests.post(
+                "https://formspree.io/f/xblanbjk",
+                data={"feedback": feedback}
+            )
+            st.success("Thanks for your feedback!")
 
-    st.caption("Created by **Shashank N P**")
+    st.markdown(
+        "<div class='sidebar-footer'>Created by <b>Shashank N P</b></div>",
+        unsafe_allow_html=True
+    )
 
-# ---------------- LLM (TEXT) ----------------
+# ---------------- TEXT LLM ----------------
 text_llm = ChatGroq(
     model="llama-3.1-8b-instant",
     api_key=st.secrets["GROQ_API_KEY"],
     temperature=temperature
-)
-
-# ---------------- LLM (VISION) ----------------
-vision_llm = ChatGroq(
-    model="llama-3.2-11b-vision-preview",
-    api_key=st.secrets["GROQ_API_KEY"],
-    temperature=0.4
 )
 
 # ---------------- HEADER ----------------
@@ -166,29 +169,50 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
-# ---------------- IMAGE PROCESSING ----------------
-if uploaded_image:
-    image_bytes = uploaded_image.getvalue()
-    image_b64 = base64.b64encode(image_bytes).decode()
+# ---------------- IMAGE RECOGNITION (FIXED) ----------------
+if image_file:
+    img_bytes = image_file.getvalue()
+    img_b64 = base64.b64encode(img_bytes).decode()
 
     with st.chat_message("user"):
-        st.image(uploaded_image, caption="Uploaded Image", use_container_width=True)
+        st.image(image_file, caption="Uploaded Image", use_container_width=True)
 
-    vision_prompt = HumanMessage(
-        content=[
-            {"type": "text", "text": "Describe this image in detail. Mention objects, people, actions, text, and scene."},
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}}
+    headers = {
+        "Authorization": f"Bearer {st.secrets['GROQ_API_KEY']}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "llama-3.2-11b-vision-preview",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Describe this image in detail."},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{img_b64}"
+                        }
+                    }
+                ]
+            }
         ]
+    }
+
+    res = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=30
     )
 
-    response = vision_llm.invoke([vision_prompt]).content
+    description = res.json()["choices"][0]["message"]["content"]
 
-    st.session_state.messages.append(
-        AIMessage(content=response)
-    )
+    st.session_state.messages.append(AIMessage(content=description))
 
     with st.chat_message("assistant"):
-        st.markdown(response)
+        st.markdown(description)
 
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
@@ -197,16 +221,11 @@ if prompt or st.session_state.voice_text:
     user_text = prompt if prompt else st.session_state.voice_text
     st.session_state.voice_text = ""
 
-    st.session_state.messages.append(
-        HumanMessage(content=user_text)
-    )
+    st.session_state.messages.append(HumanMessage(content=user_text))
 
     answer = smart_answer(user_text)
     if not answer:
         answer = text_llm.invoke(st.session_state.messages).content
 
-    st.session_state.messages.append(
-        AIMessage(content=answer)
-    )
-
+    st.session_state.messages.append(AIMessage(content=answer))
     st.rerun()
