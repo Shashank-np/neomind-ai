@@ -3,6 +3,7 @@ import requests
 from datetime import datetime
 import pytz
 import hashlib
+import uuid
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
@@ -40,11 +41,11 @@ if "messages" not in st.session_state:
 if "voice_text" not in st.session_state:
     st.session_state.voice_text = ""
 
-if "processed_audio" not in st.session_state:
-    st.session_state.processed_audio = set()
-
 if "voice_error" not in st.session_state:
     st.session_state.voice_error = False
+
+if "audio_key" not in st.session_state:
+    st.session_state.audio_key = str(uuid.uuid4())
 
 # ---------------- TIMEZONE ----------------
 @st.cache_data(ttl=3600)
@@ -77,35 +78,40 @@ with st.sidebar:
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
     st.divider()
-
     st.subheader("🎙️ Voice Input")
 
-    audio = st.audio_input("Speak", label_visibility="collapsed")
+    # 🔑 key forces reset after success
+    audio = st.audio_input(
+        "Speak",
+        key=st.session_state.audio_key,
+        label_visibility="collapsed"
+    )
 
     if audio:
-        audio_hash = hashlib.md5(audio.getvalue()).hexdigest()
+        try:
+            import speech_recognition as sr
 
-        if audio_hash not in st.session_state.processed_audio:
-            st.session_state.processed_audio.add(audio_hash)
+            recognizer = sr.Recognizer()
+            with sr.AudioFile(audio) as source:
+                audio_data = recognizer.record(source)
+
+            transcript = recognizer.recognize_google(audio_data)
+
+            # ✅ SUCCESS
+            st.session_state.voice_text = transcript
             st.session_state.voice_error = False
 
-            try:
-                import speech_recognition as sr
+            # Reset mic so error never sticks
+            st.session_state.audio_key = str(uuid.uuid4())
 
-                recognizer = sr.Recognizer()
-                with sr.AudioFile(audio) as source:
-                    audio_data = recognizer.record(source)
-
-                st.session_state.voice_text = recognizer.recognize_google(audio_data)
-
-            except:
-                st.session_state.voice_error = True
-
-    if st.session_state.voice_text:
-        st.success(f"Recognized: {st.session_state.voice_text}")
+        except:
+            st.session_state.voice_error = True
 
     if st.session_state.voice_error:
         st.warning("Couldn’t understand the voice. Please try again.")
+
+    if st.session_state.voice_text:
+        st.success(f"Recognized: {st.session_state.voice_text}")
 
     st.divider()
 
