@@ -2,8 +2,8 @@ import streamlit as st
 import requests
 from datetime import datetime
 import pytz
+import hashlib
 import uuid
-import base64
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
@@ -80,6 +80,7 @@ with st.sidebar:
     st.divider()
     st.subheader("🎙️ Voice Input")
 
+    # 🔑 key forces reset after success
     audio = st.audio_input(
         "Speak",
         key=st.session_state.audio_key,
@@ -96,8 +97,11 @@ with st.sidebar:
 
             transcript = recognizer.recognize_google(audio_data)
 
+            # ✅ SUCCESS
             st.session_state.voice_text = transcript
             st.session_state.voice_error = False
+
+            # Reset mic so error never sticks
             st.session_state.audio_key = str(uuid.uuid4())
 
         except:
@@ -108,15 +112,6 @@ with st.sidebar:
 
     if st.session_state.voice_text:
         st.success(f"Recognized: {st.session_state.voice_text}")
-
-    # -------- IMAGE INPUT (NEW) --------
-    st.divider()
-    st.subheader("🖼️ Image Input")
-
-    uploaded_image = st.file_uploader(
-        "Upload an image",
-        type=["jpg", "jpeg", "png"]
-    )
 
     st.divider()
 
@@ -143,18 +138,11 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# ---------------- LLM (TEXT) ----------------
-text_llm = ChatGroq(
+# ---------------- LLM ----------------
+llm = ChatGroq(
     model="llama-3.1-8b-instant",
     api_key=st.secrets["GROQ_API_KEY"],
     temperature=temperature
-)
-
-# ---------------- LLM (VISION) ----------------
-vision_llm = ChatGroq(
-    model="llama-3.2-11b-vision-preview",
-    api_key=st.secrets["GROQ_API_KEY"],
-    temperature=0.4
 )
 
 # ---------------- HEADER ----------------
@@ -165,30 +153,6 @@ for msg in st.session_state.messages:
     role = "user" if isinstance(msg, HumanMessage) else "assistant"
     with st.chat_message(role):
         st.markdown(msg.content)
-
-# ---------------- IMAGE PROCESSING ----------------
-if uploaded_image:
-    image_bytes = uploaded_image.getvalue()
-    image_b64 = base64.b64encode(image_bytes).decode()
-
-    with st.chat_message("user"):
-        st.image(uploaded_image, caption="Uploaded Image", use_container_width=True)
-
-    vision_prompt = HumanMessage(
-        content=[
-            {"type": "text", "text": "Describe this image in detail. Mention objects, people, actions, text, and scene."},
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}}
-        ]
-    )
-
-    response = vision_llm.invoke([vision_prompt]).content
-
-    st.session_state.messages.append(
-        AIMessage(content=response)
-    )
-
-    with st.chat_message("assistant"):
-        st.markdown(response)
 
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
@@ -203,7 +167,7 @@ if prompt or st.session_state.voice_text:
 
     answer = smart_answer(user_text)
     if not answer:
-        answer = text_llm.invoke(st.session_state.messages).content
+        answer = llm.invoke(st.session_state.messages).content
 
     st.session_state.messages.append(
         AIMessage(content=answer)
