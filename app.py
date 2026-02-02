@@ -2,14 +2,12 @@ import streamlit as st
 import requests
 from datetime import datetime
 import pytz
-import hashlib
 import uuid
-import tempfile
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 
-# IMAGE CAPTIONING (STREAMLIT SAFE)
+# IMAGE CAPTIONING (SAFE FOR STREAMLIT CLOUD)
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from PIL import Image
 
@@ -30,10 +28,6 @@ section[data-testid="stChatMessage"] {
 section[data-testid="stAudioInput"] {
     padding: 4px !important;
     margin: 0 !important;
-    border-radius: 10px;
-}
-section[data-testid="stAudioInput"] audio {
-    height: 26px !important;
 }
 footer {visibility: hidden;}
 </style>
@@ -46,11 +40,18 @@ if "messages" not in st.session_state:
 if "voice_text" not in st.session_state:
     st.session_state.voice_text = ""
 
-if "voice_error" not in st.session_state:
-    st.session_state.voice_error = False
-
 if "audio_key" not in st.session_state:
     st.session_state.audio_key = str(uuid.uuid4())
+
+# image control states
+if "image_caption" not in st.session_state:
+    st.session_state.image_caption = None
+
+if "image_detailed" not in st.session_state:
+    st.session_state.image_detailed = None
+
+if "image_processed" not in st.session_state:
+    st.session_state.image_processed = False
 
 # ---------------- TIMEZONE ----------------
 @st.cache_data(ttl=3600)
@@ -76,7 +77,7 @@ def smart_answer(prompt):
 
     return None
 
-# ---------------- IMAGE MODEL LOAD ----------------
+# ---------------- IMAGE MODEL ----------------
 @st.cache_resource
 def load_image_model():
     processor = BlipProcessor.from_pretrained(
@@ -93,10 +94,11 @@ image_processor, image_model = load_image_model()
 with st.sidebar:
     st.title("🧠 NeoMind AI")
 
+    # creativity
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    # -------- COMBINED INPUT BOX (VOICE + IMAGE) --------
-    st.subheader("🎙️🖼️ Voice / Image Input")
+    # -------- ONE INPUT BOX --------
+    st.subheader("🎙️ Voice / 🖼️ Image Input")
 
     audio = st.audio_input(
         "Speak",
@@ -110,45 +112,31 @@ with st.sidebar:
         label_visibility="collapsed"
     )
 
-    # -------- VOICE PROCESSING --------
+    # -------- VOICE PROCESS --------
     if audio:
         try:
             import speech_recognition as sr
-            recognizer = sr.Recognizer()
+            r = sr.Recognizer()
             with sr.AudioFile(audio) as source:
-                audio_data = recognizer.record(source)
-
-            transcript = recognizer.recognize_google(audio_data)
-            st.session_state.voice_text = transcript
-            st.session_state.voice_error = False
+                data = r.record(source)
+            st.session_state.voice_text = r.recognize_google(data)
             st.session_state.audio_key = str(uuid.uuid4())
         except:
-            st.session_state.voice_error = True
+            st.warning("Could not understand voice")
 
-    if st.session_state.voice_error:
-        st.warning("Couldn’t understand the voice. Please try again.")
-
-    if st.session_state.voice_text:
-        st.success(f"Recognized: {st.session_state.voice_text}")
-
-    st.divider()
-
-    # -------- CLEAR CHAT BUTTON --------
+    # -------- CLEAR CHAT --------
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.voice_text = ""
-        st.session_state.voice_error = False
+        st.session_state.image_caption = None
+        st.session_state.image_detailed = None
+        st.session_state.image_processed = False
         st.rerun()
 
-    st.divider()
-
     # -------- FEEDBACK --------
+    st.divider()
     st.subheader("🆘 Feedback")
-    feedback = st.text_area(
-        "Your feedback",
-        placeholder="Tell us what you like or what we can improve…",
-        height=90
-    )
+    feedback = st.text_area("Your feedback", height=90)
 
     if st.button("📨 Send Feedback"):
         if feedback.strip():
@@ -161,8 +149,6 @@ with st.sidebar:
                 st.success("Thanks for your feedback!")
             except:
                 st.error("Failed to send feedback.")
-        else:
-            st.warning("Please write something first.")
 
     st.caption("Created by **Shashank N P**")
 
@@ -182,6 +168,19 @@ for msg in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(msg.content)
 
+# ---------------- IMAGE PROCESS (ONLY ONCE) ----------------
+if uploaded_image and not st.session_state.image_processed:
+    image = Image.open(uploaded_image).convert("RGB")
+    inputs = image_processor(image, return_tensors="pt")
+    out = image_model.generate(**inputs)
+    caption = image_processor.decode(out[0], skip_special_tokens=True)
+
+    st.session_state.image_caption = caption
+    st.session_state.image_processed = True
+
+    msg = f"🖼️ I see: **{caption}**"
+    st.session_state.messages.append(AIMessage(content=msg))
+
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
 
@@ -189,36 +188,32 @@ if prompt or st.session_state.voice_text:
     user_text = prompt if prompt else st.session_state.voice_text
     st.session_state.voice_text = ""
 
-    st.session_state.messages.append(
-        HumanMessage(content=user_text)
-    )
+    st.session_state.messages.append(HumanMessage(content=user_text))
 
     answer = smart_answer(user_text)
+
+    # image detail request
+    if not answer and st.session_state.image_caption:
+        key_words = ["detail", "explain", "describe", "more"]
+        if any(k in user_text.lower() for k in key_words):
+            if not st.session_state.image_detailed:
+                detail_prompt = (
+                    f"The image shows: {st.session_state.image_caption}. "
+                    f"Explain this image in detail."
+                )
+                detailed = llm.invoke(detail_prompt).content
+                st.session_state.image_detailed = detailed
+
+                final_reply = (
+                    detailed +
+                    f"\n\n📌 **In short:** {st.session_state.image_caption}"
+                )
+                answer = final_reply
+            else:
+                answer = "I already explained the image. Ask something else 🙂"
+
     if not answer:
         answer = llm.invoke(st.session_state.messages).content
 
-    st.session_state.messages.append(
-        AIMessage(content=answer)
-    )
-
+    st.session_state.messages.append(AIMessage(content=answer))
     st.rerun()
-
-# ---------------- IMAGE PROCESSING ----------------
-if uploaded_image:
-    image = Image.open(uploaded_image).convert("RGB")
-
-    inputs = image_processor(image, return_tensors="pt")
-    output = image_model.generate(**inputs)
-
-    caption = image_processor.decode(
-        output[0], skip_special_tokens=True
-    )
-
-    image_answer = f"🖼️ This image looks like: **{caption}**"
-
-    st.session_state.messages.append(
-        AIMessage(content=image_answer)
-    )
-
-    with st.chat_message("assistant"):
-        st.markdown(image_answer)
