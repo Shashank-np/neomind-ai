@@ -33,7 +33,7 @@ section[data-testid="stAudioInput"] {
     text-align: center;
     font-size: 22px;
     font-weight: bold;
-    margin-top: 10px;
+    margin: 10px 0;
 }
 footer {visibility: hidden;}
 </style>
@@ -99,18 +99,11 @@ image_processor, image_model = load_image_model()
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
 
-    # 1️⃣ VOICE + IMAGE INPUT (ONE BOX)
-    st.subheader("🎙️ Voice / 🖼️ Image Input")
-
+    # -------- VOICE INPUT --------
+    st.markdown("### 🎙️ Voice Input")
     audio = st.audio_input(
         "Speak",
         key=st.session_state.audio_key,
-        label_visibility="collapsed"
-    )
-
-    uploaded_image = st.file_uploader(
-        "Upload image",
-        type=["jpg", "jpeg", "png"],
         label_visibility="collapsed"
     )
 
@@ -125,16 +118,25 @@ with st.sidebar:
         except:
             st.warning("Could not understand voice")
 
-    # 2️⃣ LOGO BELOW INPUT
+    # -------- IMAGE INPUT --------
+    st.markdown("### 🖼️ Image Upload")
+    uploaded_image = st.file_uploader(
+        "Upload image",
+        type=["jpg", "jpeg", "png"],
+        label_visibility="collapsed"
+    )
+
+    # -------- LOGO (BOTTOM OF INPUT SECTION) --------
     st.markdown("<div class='sidebar-logo'>🧠 NeoMind AI</div>", unsafe_allow_html=True)
 
-    # 3️⃣ LINE
+    # -------- LINE --------
     st.divider()
 
-    # 4️⃣ CREATIVITY
-    temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
+    # -------- CREATIVITY --------
+    st.markdown("### 🎨 Creativity")
+    temperature = st.slider("", 0.0, 1.0, 0.7)
 
-    # 5️⃣ CLEAR CHAT
+    # -------- CLEAR CHAT --------
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.voice_text = ""
@@ -143,11 +145,11 @@ with st.sidebar:
         st.session_state.image_processed = False
         st.rerun()
 
-    # 6️⃣ LINE
+    # -------- LINE --------
     st.divider()
 
-    # 7️⃣ FEEDBACK
-    st.subheader("🆘 Feedback")
+    # -------- FEEDBACK --------
+    st.markdown("### 🆘 Feedback")
     feedback = st.text_area(
         "Your feedback",
         placeholder="Tell us what you like or what we can improve…",
@@ -166,7 +168,6 @@ with st.sidebar:
             except:
                 st.error("Failed to send feedback.")
 
-    # 8️⃣ CREATED BY
     st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
