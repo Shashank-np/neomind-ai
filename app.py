@@ -101,6 +101,9 @@ with st.sidebar:
     
     # -------- LOGO (BOTTOM OF INPUT SECTION) --------
     st.markdown("<div class='sidebar-logo'>🧠 NeoMind AI</div>", unsafe_allow_html=True)
+
+    # -------- LINE --------
+    st.divider()
     
     # -------- VOICE INPUT --------
     st.markdown("### 🎙️ Voice Input")
@@ -135,7 +138,7 @@ with st.sidebar:
 
     # -------- CREATIVITY --------
     st.markdown("### 🎨 Creativity")
-    temperature = st.slider("", 0.0, 1.0, 0.7)
+    temperature = st.slider("", 0.0, 1.0, 0.5)
 
     # -------- CLEAR CHAT --------
     if st.button("🧹 Clear Chat"):
@@ -234,4 +237,5 @@ if prompt or st.session_state.voice_text:
 
     st.session_state.messages.append(AIMessage(content=answer))
     st.rerun()
+
 
