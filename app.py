@@ -98,7 +98,10 @@ image_processor, image_model = load_image_model()
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
-
+    
+    # -------- LOGO (BOTTOM OF INPUT SECTION) --------
+    st.markdown("<div class='sidebar-logo'>🧠 NeoMind AI</div>", unsafe_allow_html=True)
+    
     # -------- VOICE INPUT --------
     st.markdown("### 🎙️ Voice Input")
     audio = st.audio_input(
@@ -126,8 +129,6 @@ with st.sidebar:
         label_visibility="collapsed"
     )
 
-    # -------- LOGO (BOTTOM OF INPUT SECTION) --------
-    st.markdown("<div class='sidebar-logo'>🧠 NeoMind AI</div>", unsafe_allow_html=True)
 
     # -------- LINE --------
     st.divider()
@@ -233,3 +234,4 @@ if prompt or st.session_state.voice_text:
 
     st.session_state.messages.append(AIMessage(content=answer))
     st.rerun()
+
