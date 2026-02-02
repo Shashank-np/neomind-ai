@@ -6,3 +6,8 @@ beautifulsoup4
 pydub
 speechrecognition
 langchain-groq
+ultralytics
+pillow
+opencv-python-headless
+
+
