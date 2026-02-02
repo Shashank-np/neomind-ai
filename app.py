@@ -9,6 +9,10 @@ import tempfile
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 
+# ✅ IMAGE CAPTIONING IMPORTS (STREAMLIT SAFE)
+from transformers import BlipProcessor, BlipForConditionalGeneration
+from PIL import Image
+
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="NeoMind AI",
@@ -72,18 +76,18 @@ def smart_answer(prompt):
 
     return None
 
-# ---------------- IMAGE MODEL (SAFE LOAD) ----------------
+# ---------------- IMAGE MODEL LOAD (SAFE) ----------------
 @st.cache_resource
 def load_image_model():
-    try:
-        from ultralytics import YOLO
-        return YOLO("yolov8n.pt")
-    except Exception as e:
-        st.error("Image model failed to load.")
-        st.exception(e)
-        return None
+    processor = BlipProcessor.from_pretrained(
+        "Salesforce/blip-image-captioning-base"
+    )
+    model = BlipForConditionalGeneration.from_pretrained(
+        "Salesforce/blip-image-captioning-base"
+    )
+    return processor, model
 
-image_model = load_image_model()
+image_processor, image_model = load_image_model()
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
@@ -192,26 +196,21 @@ if prompt or st.session_state.voice_text:
     st.rerun()
 
 # ---------------- IMAGE PROCESSING ----------------
-if uploaded_image and image_model:
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
-        tmp.write(uploaded_image.read())
-        image_path = tmp.name
+if uploaded_image:
+    image = Image.open(uploaded_image).convert("RGB")
 
-    results = image_model(image_path)
+    inputs = image_processor(image, return_tensors="pt")
+    output = image_model.generate(**inputs)
 
-    detected = []
-    for box in results[0].boxes:
-        cls_id = int(box.cls[0])
-        label = image_model.names[cls_id]
-        detected.append(label)
+    caption = image_processor.decode(
+        output[0], skip_special_tokens=True
+    )
 
-    detected = list(set(detected))
+    image_answer = f"🖼️ This image looks like: **{caption}**"
 
-    if detected:
-        reply = "I can see: " + ", ".join(detected)
-    else:
-        reply = "I couldn't recognize anything in this image."
+    st.session_state.messages.append(
+        AIMessage(content=image_answer)
+    )
 
-    st.session_state.messages.append(AIMessage(content=reply))
     with st.chat_message("assistant"):
-        st.markdown(reply)
+        st.markdown(image_answer)
