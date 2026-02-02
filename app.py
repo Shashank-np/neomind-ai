@@ -9,7 +9,7 @@ import tempfile
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 
-# ✅ IMAGE CAPTIONING IMPORTS (STREAMLIT SAFE)
+# IMAGE CAPTIONING (STREAMLIT SAFE)
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from PIL import Image
 
@@ -29,7 +29,7 @@ section[data-testid="stChatMessage"] {
 }
 section[data-testid="stAudioInput"] {
     padding: 4px !important;
-    margin: 4px 0 !important;
+    margin: 0 !important;
     border-radius: 10px;
 }
 section[data-testid="stAudioInput"] audio {
@@ -76,7 +76,7 @@ def smart_answer(prompt):
 
     return None
 
-# ---------------- IMAGE MODEL LOAD (SAFE) ----------------
+# ---------------- IMAGE MODEL LOAD ----------------
 @st.cache_resource
 def load_image_model():
     processor = BlipProcessor.from_pretrained(
@@ -95,8 +95,8 @@ with st.sidebar:
 
     temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
 
-    st.divider()
-    st.subheader("🎙️ Voice Input")
+    # -------- COMBINED INPUT BOX (VOICE + IMAGE) --------
+    st.subheader("🎙️🖼️ Voice / Image Input")
 
     audio = st.audio_input(
         "Speak",
@@ -104,14 +104,21 @@ with st.sidebar:
         label_visibility="collapsed"
     )
 
+    uploaded_image = st.file_uploader(
+        "Upload image",
+        type=["jpg", "jpeg", "png"],
+        label_visibility="collapsed"
+    )
+
+    # -------- VOICE PROCESSING --------
     if audio:
         try:
             import speech_recognition as sr
             recognizer = sr.Recognizer()
             with sr.AudioFile(audio) as source:
                 audio_data = recognizer.record(source)
-            transcript = recognizer.recognize_google(audio_data)
 
+            transcript = recognizer.recognize_google(audio_data)
             st.session_state.voice_text = transcript
             st.session_state.voice_error = False
             st.session_state.audio_key = str(uuid.uuid4())
@@ -124,18 +131,19 @@ with st.sidebar:
     if st.session_state.voice_text:
         st.success(f"Recognized: {st.session_state.voice_text}")
 
-    # ---------------- IMAGE INPUT ----------------
     st.divider()
-    st.subheader("🖼️ Image Input")
 
-    uploaded_image = st.file_uploader(
-        "Upload an image",
-        type=["jpg", "jpeg", "png"]
-    )
+    # -------- CLEAR CHAT BUTTON --------
+    if st.button("🧹 Clear Chat"):
+        st.session_state.messages = []
+        st.session_state.voice_text = ""
+        st.session_state.voice_error = False
+        st.rerun()
 
     st.divider()
+
+    # -------- FEEDBACK --------
     st.subheader("🆘 Feedback")
-
     feedback = st.text_area(
         "Your feedback",
         placeholder="Tell us what you like or what we can improve…",
