@@ -4,14 +4,10 @@ from datetime import datetime
 import pytz
 import hashlib
 import uuid
+import tempfile
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
-
-# ✅ IMAGE RECOGNITION IMPORTS (ADDED)
-from ultralytics import YOLO
-from PIL import Image
-import tempfile
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -76,10 +72,16 @@ def smart_answer(prompt):
 
     return None
 
-# ---------------- IMAGE MODEL LOAD (ADDED) ----------------
+# ---------------- IMAGE MODEL (SAFE LOAD) ----------------
 @st.cache_resource
 def load_image_model():
-    return YOLO("yolov8n.pt")   # auto-downloads once
+    try:
+        from ultralytics import YOLO
+        return YOLO("yolov8n.pt")
+    except Exception as e:
+        st.error("Image model failed to load.")
+        st.exception(e)
+        return None
 
 image_model = load_image_model()
 
@@ -101,17 +103,14 @@ with st.sidebar:
     if audio:
         try:
             import speech_recognition as sr
-
             recognizer = sr.Recognizer()
             with sr.AudioFile(audio) as source:
                 audio_data = recognizer.record(source)
-
             transcript = recognizer.recognize_google(audio_data)
 
             st.session_state.voice_text = transcript
             st.session_state.voice_error = False
             st.session_state.audio_key = str(uuid.uuid4())
-
         except:
             st.session_state.voice_error = True
 
@@ -121,7 +120,7 @@ with st.sidebar:
     if st.session_state.voice_text:
         st.success(f"Recognized: {st.session_state.voice_text}")
 
-    # ---------------- IMAGE INPUT (ADDED) ----------------
+    # ---------------- IMAGE INPUT ----------------
     st.divider()
     st.subheader("🖼️ Image Input")
 
@@ -132,6 +131,7 @@ with st.sidebar:
 
     st.divider()
     st.subheader("🆘 Feedback")
+
     feedback = st.text_area(
         "Your feedback",
         placeholder="Tell us what you like or what we can improve…",
@@ -191,30 +191,27 @@ if prompt or st.session_state.voice_text:
 
     st.rerun()
 
-# ---------------- IMAGE PROCESSING (ADDED) ----------------
-if uploaded_image:
+# ---------------- IMAGE PROCESSING ----------------
+if uploaded_image and image_model:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
         tmp.write(uploaded_image.read())
         image_path = tmp.name
 
     results = image_model(image_path)
 
-    detected_objects = []
+    detected = []
     for box in results[0].boxes:
         cls_id = int(box.cls[0])
         label = image_model.names[cls_id]
-        detected_objects.append(label)
+        detected.append(label)
 
-    detected_objects = list(set(detected_objects))
+    detected = list(set(detected))
 
-    if detected_objects:
-        image_answer = "I can see: " + ", ".join(detected_objects)
+    if detected:
+        reply = "I can see: " + ", ".join(detected)
     else:
-        image_answer = "I couldn't recognize anything in this image."
+        reply = "I couldn't recognize anything in this image."
 
-    st.session_state.messages.append(
-        AIMessage(content=image_answer)
-    )
-
+    st.session_state.messages.append(AIMessage(content=reply))
     with st.chat_message("assistant"):
-        st.markdown(image_answer)
+        st.markdown(reply)
