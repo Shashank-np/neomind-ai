@@ -7,7 +7,7 @@ import uuid
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 
-# IMAGE CAPTIONING (SAFE FOR STREAMLIT CLOUD)
+# IMAGE CAPTIONING (STREAMLIT CLOUD SAFE)
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from PIL import Image
 
@@ -29,6 +29,12 @@ section[data-testid="stAudioInput"] {
     padding: 4px !important;
     margin: 0 !important;
 }
+.sidebar-logo {
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    margin-top: 10px;
+}
 footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -43,7 +49,7 @@ if "voice_text" not in st.session_state:
 if "audio_key" not in st.session_state:
     st.session_state.audio_key = str(uuid.uuid4())
 
-# image control states
+# image control
 if "image_caption" not in st.session_state:
     st.session_state.image_caption = None
 
@@ -92,12 +98,8 @@ image_processor, image_model = load_image_model()
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
-    st.title("🧠 NeoMind AI")
 
-    # creativity
-    temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
-
-    # -------- ONE INPUT BOX --------
+    # 1️⃣ VOICE + IMAGE INPUT (ONE BOX)
     st.subheader("🎙️ Voice / 🖼️ Image Input")
 
     audio = st.audio_input(
@@ -112,7 +114,6 @@ with st.sidebar:
         label_visibility="collapsed"
     )
 
-    # -------- VOICE PROCESS --------
     if audio:
         try:
             import speech_recognition as sr
@@ -124,7 +125,16 @@ with st.sidebar:
         except:
             st.warning("Could not understand voice")
 
-    # -------- CLEAR CHAT --------
+    # 2️⃣ LOGO BELOW INPUT
+    st.markdown("<div class='sidebar-logo'>🧠 NeoMind AI</div>", unsafe_allow_html=True)
+
+    # 3️⃣ LINE
+    st.divider()
+
+    # 4️⃣ CREATIVITY
+    temperature = st.slider("Creativity", 0.0, 1.0, 0.7)
+
+    # 5️⃣ CLEAR CHAT
     if st.button("🧹 Clear Chat"):
         st.session_state.messages = []
         st.session_state.voice_text = ""
@@ -133,10 +143,16 @@ with st.sidebar:
         st.session_state.image_processed = False
         st.rerun()
 
-    # -------- FEEDBACK --------
+    # 6️⃣ LINE
     st.divider()
+
+    # 7️⃣ FEEDBACK
     st.subheader("🆘 Feedback")
-    feedback = st.text_area("Your feedback", height=90)
+    feedback = st.text_area(
+        "Your feedback",
+        placeholder="Tell us what you like or what we can improve…",
+        height=90
+    )
 
     if st.button("📨 Send Feedback"):
         if feedback.strip():
@@ -150,6 +166,7 @@ with st.sidebar:
             except:
                 st.error("Failed to send feedback.")
 
+    # 8️⃣ CREATED BY
     st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
@@ -178,8 +195,9 @@ if uploaded_image and not st.session_state.image_processed:
     st.session_state.image_caption = caption
     st.session_state.image_processed = True
 
-    msg = f"🖼️ I see: **{caption}**"
-    st.session_state.messages.append(AIMessage(content=msg))
+    st.session_state.messages.append(
+        AIMessage(content=f"🖼️ I see: **{caption}**")
+    )
 
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
@@ -192,10 +210,8 @@ if prompt or st.session_state.voice_text:
 
     answer = smart_answer(user_text)
 
-    # image detail request
     if not answer and st.session_state.image_caption:
-        key_words = ["detail", "explain", "describe", "more"]
-        if any(k in user_text.lower() for k in key_words):
+        if any(k in user_text.lower() for k in ["detail", "explain", "describe", "more"]):
             if not st.session_state.image_detailed:
                 detail_prompt = (
                     f"The image shows: {st.session_state.image_caption}. "
@@ -204,11 +220,10 @@ if prompt or st.session_state.voice_text:
                 detailed = llm.invoke(detail_prompt).content
                 st.session_state.image_detailed = detailed
 
-                final_reply = (
+                answer = (
                     detailed +
                     f"\n\n📌 **In short:** {st.session_state.image_caption}"
                 )
-                answer = final_reply
             else:
                 answer = "I already explained the image. Ask something else 🙂"
 
