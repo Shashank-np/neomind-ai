@@ -7,9 +7,6 @@ pydub
 speechrecognition
 langchain-groq
 
-# ✅ image recognition (COMPATIBLE)
-ultralytics==8.1.47
-opencv-python-headless==4.9.0.80
+transformers
 pillow
-torch==2.2.2
-torchvision==0.17.2
+torch
