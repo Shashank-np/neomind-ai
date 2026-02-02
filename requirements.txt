@@ -6,8 +6,10 @@ beautifulsoup4
 pydub
 speechrecognition
 langchain-groq
-ultralytics
+
+# ✅ image recognition (COMPATIBLE)
+ultralytics==8.1.47
+opencv-python-headless==4.9.0.80
 pillow
-opencv-python-headless
-
-
+torch==2.2.2
+torchvision==0.17.2
