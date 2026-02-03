@@ -4,13 +4,12 @@ from datetime import datetime
 import pytz
 import uuid
 from PIL import Image
-import torch
+import io
+import base64
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
-
 from transformers import BlipProcessor, BlipForConditionalGeneration
-from diffusers import StableDiffusionPipeline
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -46,6 +45,9 @@ if "image_caption" not in st.session_state:
 if "image_id" not in st.session_state:
     st.session_state.image_id = None
 
+if "generated_image" not in st.session_state:
+    st.session_state.generated_image = None
+
 # ---------------- TIMEZONE ----------------
 @st.cache_data(ttl=3600)
 def get_timezone():
@@ -79,25 +81,25 @@ def load_caption_model():
 
 image_processor, image_model = load_caption_model()
 
-# ---------------- TEXT TO IMAGE MODEL (FREE) ----------------
-@st.cache_resource
-def load_sd_model():
-    pipe = StableDiffusionPipeline.from_pretrained(
-        "runwayml/stable-diffusion-v1-5",
-        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+# ---------------- TEXT TO IMAGE (HF API) ----------------
+def generate_image_hf(prompt):
+    API_URL = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
+    headers = {
+        "Authorization": f"Bearer {st.secrets['HF_API_KEY']}"
+    }
+    response = requests.post(
+        API_URL,
+        headers=headers,
+        json={"inputs": prompt},
+        timeout=60
     )
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    pipe = pipe.to(device)
-    return pipe
-
-sd_pipe = load_sd_model()
+    return Image.open(io.BytesIO(response.content))
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.markdown("## 🧠 NeoMind AI")
     st.divider()
 
-    # ---- VOICE INPUT ----
     audio = st.audio_input("🎙️ Speak", key=st.session_state.audio_key)
 
     if audio:
@@ -111,7 +113,6 @@ with st.sidebar:
         except:
             st.warning("Voice not clear")
 
-    # ---- IMAGE UPLOAD ----
     uploaded_image = st.file_uploader(
         "🖼️ Upload Image",
         type=["jpg", "jpeg", "png"]
@@ -119,27 +120,25 @@ with st.sidebar:
 
     st.divider()
 
-    # ---- TEXT TO IMAGE ----
     st.markdown("### 🎨 Create Image")
     image_prompt = st.text_input(
-        "Describe the image you want",
+        "Describe the image",
         placeholder="A futuristic robot reading a book"
     )
 
     create_image = st.button("🖌️ Create Image")
 
     st.divider()
-
     temperature = st.slider("Creativity", 0.0, 1.0, 0.5)
 
     if st.button("🧹 Clear Chat"):
         st.session_state.messages.clear()
         st.session_state.image_caption = None
         st.session_state.image_id = None
+        st.session_state.generated_image = None
         st.session_state.voice_text = ""
         st.rerun()
 
-    st.divider()
     st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
@@ -152,7 +151,7 @@ llm = ChatGroq(
 # ---------------- HEADER ----------------
 st.markdown("<h2 style='text-align:center'>💬 NeoMind AI</h2>", unsafe_allow_html=True)
 
-# ---------------- IMAGE CAPTION PROCESS ----------------
+# ---------------- IMAGE CAPTION ----------------
 if uploaded_image:
     image_key = uploaded_image.name + str(uploaded_image.size)
 
@@ -170,24 +169,19 @@ if uploaded_image:
         )
         st.rerun()
 
-# ---------------- TEXT TO IMAGE GENERATION ----------------
+# ---------------- TEXT TO IMAGE ----------------
 if create_image and image_prompt.strip():
-    with st.spinner("Creating image... please wait"):
-        generated_image = sd_pipe(image_prompt).images[0]
+    with st.spinner("Creating image..."):
+        img = generate_image_hf(image_prompt)
+
+    st.session_state.generated_image = img
 
     st.session_state.messages.append(
         HumanMessage(content=f"Create image: {image_prompt}")
     )
-
-    st.session_state.messages.append(
-        AIMessage(content="🎨 Image generated below:")
-    )
-
     st.session_state.messages.append(
         AIMessage(content="__IMAGE__")
     )
-
-    st.session_state.generated_image = generated_image
     st.rerun()
 
 # ---------------- CHAT HISTORY ----------------
@@ -211,7 +205,7 @@ if prompt or st.session_state.voice_text:
     answer = smart_answer(user_text)
 
     if not answer and st.session_state.image_caption:
-        if any(k in user_text.lower() for k in ["image", "photo", "picture"]):
+        if "image" in user_text.lower():
             answer = llm.invoke(
                 f"Explain this image: {st.session_state.image_caption}"
             ).content
