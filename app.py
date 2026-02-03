@@ -1,14 +1,14 @@
+
 import streamlit as st
 import requests
 from datetime import datetime
 import pytz
 import uuid
 from PIL import Image
-import io
-import json
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
+
 from transformers import BlipProcessor, BlipForConditionalGeneration
 
 # ---------------- PAGE CONFIG ----------------
@@ -24,6 +24,9 @@ st.markdown("""
 section[data-testid="stChatMessage"] {
     border-radius: 12px;
     padding: 10px;
+}
+section[data-testid="stAudioInput"] {
+    padding: 2px !important;
 }
 footer {visibility: hidden;}
 </style>
@@ -44,9 +47,6 @@ if "image_caption" not in st.session_state:
 
 if "image_id" not in st.session_state:
     st.session_state.image_id = None
-
-if "generated_image" not in st.session_state:
-    st.session_state.generated_image = None
 
 # ---------------- TIMEZONE ----------------
 @st.cache_data(ttl=3600)
@@ -72,51 +72,21 @@ def smart_answer(text):
 
     return None
 
-# ---------------- IMAGE CAPTION MODEL ----------------
+# ---------------- IMAGE MODEL ----------------
 @st.cache_resource
-def load_caption_model():
+def load_image_model():
     processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
     model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
     return processor, model
 
-image_processor, image_model = load_caption_model()
-
-# ---------------- SAFE HF IMAGE GENERATION ----------------
-def generate_image_hf(prompt):
-    API_URL = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
-    headers = {
-        "Authorization": f"Bearer {st.secrets['HF_API_KEY']}"
-    }
-
-    response = requests.post(
-        API_URL,
-        headers=headers,
-        json={"inputs": prompt},
-        timeout=60
-    )
-
-    content_type = response.headers.get("content-type", "")
-
-    # ✅ If image is returned
-    if "image" in content_type:
-        return Image.open(io.BytesIO(response.content))
-
-    # ❌ If JSON error returned
-    error_data = response.json()
-
-    if "error" in error_data:
-        raise RuntimeError(error_data["error"])
-
-    if "estimated_time" in error_data:
-        raise RuntimeError("Model is loading. Please try again in a few seconds.")
-
-    raise RuntimeError("Unexpected response from image API.")
+image_processor, image_model = load_image_model()
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
     st.markdown("## 🧠 NeoMind AI")
     st.divider()
 
+    # ---- VOICE INPUT ----
     audio = st.audio_input("🎙️ Speak", key=st.session_state.audio_key)
 
     if audio:
@@ -128,8 +98,9 @@ with st.sidebar:
             st.session_state.voice_text = r.recognize_google(data)
             st.session_state.audio_key = str(uuid.uuid4())
         except:
-            st.warning("Voice not clear")
+            st.warning("Could not understand voice")
 
+    # ---- IMAGE INPUT ----
     uploaded_image = st.file_uploader(
         "🖼️ Upload Image",
         type=["jpg", "jpeg", "png"]
@@ -137,24 +108,40 @@ with st.sidebar:
 
     st.divider()
 
-    st.markdown("### 🎨 Create Image")
-    image_prompt = st.text_input(
-        "Describe the image",
-        placeholder="A realistic lion sitting on a rock"
-    )
+    temperature = st.slider("🎨 Creativity", 0.0, 1.0, 0.5)
 
-    create_image = st.button("🖌️ Create Image")
-
-    st.divider()
-    temperature = st.slider("Creativity", 0.0, 1.0, 0.5)
-
+    # ---- CLEAR CHAT ----
     if st.button("🧹 Clear Chat"):
         st.session_state.messages.clear()
         st.session_state.image_caption = None
         st.session_state.image_id = None
-        st.session_state.generated_image = None
         st.session_state.voice_text = ""
         st.rerun()
+
+    st.divider()
+
+    # ---------------- FEEDBACK BOX ----------------
+    st.markdown("### 🆘 Feedback")
+
+    feedback = st.text_area(
+        "Your feedback",
+        placeholder="Tell us what you like or what we can improve…",
+        height=90
+    )
+
+    if st.button("📨 Send Feedback"):
+        if feedback.strip():
+            try:
+                requests.post(
+                    "https://formspree.io/f/xblanbjk",
+                    data={"feedback": feedback},
+                    timeout=5
+                )
+                st.success("Thanks for your feedback 🙌")
+            except:
+                st.error("Failed to send feedback")
+        else:
+            st.warning("Please write some feedback")
 
     st.caption("Created by **Shashank N P**")
 
@@ -168,50 +155,29 @@ llm = ChatGroq(
 # ---------------- HEADER ----------------
 st.markdown("<h2 style='text-align:center'>💬 NeoMind AI</h2>", unsafe_allow_html=True)
 
-# ---------------- IMAGE CAPTION ----------------
+# ---------------- IMAGE PROCESS (IMMEDIATE RESPONSE) ----------------
 if uploaded_image:
-    image_key = uploaded_image.name + str(uploaded_image.size)
+    current_image_id = uploaded_image.name + str(uploaded_image.size)
 
-    if image_key != st.session_state.image_id:
+    if current_image_id != st.session_state.image_id:
         image = Image.open(uploaded_image).convert("RGB")
         inputs = image_processor(image, return_tensors="pt")
         output = image_model.generate(**inputs)
         caption = image_processor.decode(output[0], skip_special_tokens=True)
 
         st.session_state.image_caption = caption
-        st.session_state.image_id = image_key
+        st.session_state.image_id = current_image_id
 
         st.session_state.messages.append(
             AIMessage(content=f"🖼️ **Image detected:** {caption}")
         )
         st.rerun()
 
-# ---------------- TEXT TO IMAGE ----------------
-if create_image and image_prompt.strip():
-    try:
-        with st.spinner("Creating image… please wait"):
-            img = generate_image_hf(image_prompt)
-
-        st.session_state.generated_image = img
-        st.session_state.messages.append(
-            HumanMessage(content=f"Create image: {image_prompt}")
-        )
-        st.session_state.messages.append(
-            AIMessage(content="__IMAGE__")
-        )
-        st.rerun()
-
-    except Exception as e:
-        st.error(str(e))
-
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
     role = "user" if isinstance(msg, HumanMessage) else "assistant"
     with st.chat_message(role):
-        if msg.content == "__IMAGE__":
-            st.image(st.session_state.generated_image, use_container_width=True)
-        else:
-            st.markdown(msg.content)
+        st.markdown(msg.content)
 
 # ---------------- CHAT INPUT ----------------
 prompt = st.chat_input("Ask NeoMind AI anything…")
@@ -225,10 +191,9 @@ if prompt or st.session_state.voice_text:
     answer = smart_answer(user_text)
 
     if not answer and st.session_state.image_caption:
-        if "image" in user_text.lower():
-            answer = llm.invoke(
-                f"Explain this image: {st.session_state.image_caption}"
-            ).content
+        if any(k in user_text.lower() for k in ["image", "photo", "picture", "this"]):
+            detail_prompt = f"Describe this image in detail: {st.session_state.image_caption}"
+            answer = llm.invoke(detail_prompt).content
 
     if not answer:
         answer = llm.invoke(st.session_state.messages).content
