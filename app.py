@@ -97,7 +97,7 @@ with st.sidebar:
             st.session_state.voice_text = r.recognize_google(data)
             st.session_state.audio_key = str(uuid.uuid4())
         except:
-            st.warning("Voice not clear")
+            st.warning("Could not understand voice")
 
     # ---- IMAGE INPUT ----
     uploaded_image = st.file_uploader(
@@ -109,6 +109,7 @@ with st.sidebar:
 
     temperature = st.slider("🎨 Creativity", 0.0, 1.0, 0.5)
 
+    # ---- CLEAR CHAT ----
     if st.button("🧹 Clear Chat"):
         st.session_state.messages.clear()
         st.session_state.image_caption = None
@@ -117,6 +118,30 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
+
+    # ---------------- FEEDBACK BOX ----------------
+    st.markdown("### 🆘 Feedback")
+
+    feedback = st.text_area(
+        "Your feedback",
+        placeholder="Tell us what you like or what we can improve…",
+        height=90
+    )
+
+    if st.button("📨 Send Feedback"):
+        if feedback.strip():
+            try:
+                requests.post(
+                    "https://formspree.io/f/xblanbjk",
+                    data={"feedback": feedback},
+                    timeout=5
+                )
+                st.success("Thanks for your feedback 🙌")
+            except:
+                st.error("Failed to send feedback")
+        else:
+            st.warning("Please write some feedback")
+
     st.caption("Created by **Shashank N P**")
 
 # ---------------- LLM ----------------
@@ -145,7 +170,6 @@ if uploaded_image:
         st.session_state.messages.append(
             AIMessage(content=f"🖼️ **Image detected:** {caption}")
         )
-
         st.rerun()
 
 # ---------------- CHAT HISTORY ----------------
@@ -155,7 +179,7 @@ for msg in st.session_state.messages:
         st.markdown(msg.content)
 
 # ---------------- CHAT INPUT ----------------
-prompt = st.chat_input("Ask something…")
+prompt = st.chat_input("Ask NeoMind AI anything…")
 
 if prompt or st.session_state.voice_text:
     user_text = prompt if prompt else st.session_state.voice_text
