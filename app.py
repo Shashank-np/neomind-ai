@@ -5,7 +5,7 @@ import pytz
 import uuid
 from PIL import Image
 import io
-import base64
+import json
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
@@ -81,19 +81,36 @@ def load_caption_model():
 
 image_processor, image_model = load_caption_model()
 
-# ---------------- TEXT TO IMAGE (HF API) ----------------
+# ---------------- SAFE HF IMAGE GENERATION ----------------
 def generate_image_hf(prompt):
     API_URL = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
     headers = {
         "Authorization": f"Bearer {st.secrets['HF_API_KEY']}"
     }
+
     response = requests.post(
         API_URL,
         headers=headers,
         json={"inputs": prompt},
         timeout=60
     )
-    return Image.open(io.BytesIO(response.content))
+
+    content_type = response.headers.get("content-type", "")
+
+    # ✅ If image is returned
+    if "image" in content_type:
+        return Image.open(io.BytesIO(response.content))
+
+    # ❌ If JSON error returned
+    error_data = response.json()
+
+    if "error" in error_data:
+        raise RuntimeError(error_data["error"])
+
+    if "estimated_time" in error_data:
+        raise RuntimeError("Model is loading. Please try again in a few seconds.")
+
+    raise RuntimeError("Unexpected response from image API.")
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
@@ -123,7 +140,7 @@ with st.sidebar:
     st.markdown("### 🎨 Create Image")
     image_prompt = st.text_input(
         "Describe the image",
-        placeholder="A futuristic robot reading a book"
+        placeholder="A realistic lion sitting on a rock"
     )
 
     create_image = st.button("🖌️ Create Image")
@@ -171,18 +188,21 @@ if uploaded_image:
 
 # ---------------- TEXT TO IMAGE ----------------
 if create_image and image_prompt.strip():
-    with st.spinner("Creating image..."):
-        img = generate_image_hf(image_prompt)
+    try:
+        with st.spinner("Creating image… please wait"):
+            img = generate_image_hf(image_prompt)
 
-    st.session_state.generated_image = img
+        st.session_state.generated_image = img
+        st.session_state.messages.append(
+            HumanMessage(content=f"Create image: {image_prompt}")
+        )
+        st.session_state.messages.append(
+            AIMessage(content="__IMAGE__")
+        )
+        st.rerun()
 
-    st.session_state.messages.append(
-        HumanMessage(content=f"Create image: {image_prompt}")
-    )
-    st.session_state.messages.append(
-        AIMessage(content="__IMAGE__")
-    )
-    st.rerun()
+    except Exception as e:
+        st.error(str(e))
 
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
