@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 from datetime import datetime
@@ -72,14 +71,25 @@ def smart_answer(text):
 
     return None
 
-# ---------------- IMAGE MODEL ----------------
+# ---------------- IMAGE MODEL (LAZY LOAD) ----------------
 @st.cache_resource
 def load_image_model():
-    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-    model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+    processor = BlipProcessor.from_pretrained(
+        "Salesforce/blip-image-captioning-base"
+    )
+    model = BlipForConditionalGeneration.from_pretrained(
+        "Salesforce/blip-image-captioning-base"
+    )
     return processor, model
 
-image_processor, image_model = load_image_model()
+# ---------------- LLM (LAZY LOAD) ----------------
+@st.cache_resource
+def load_llm(temp):
+    return ChatGroq(
+        model="llama-3.1-8b-instant",
+        api_key=st.secrets["GROQ_API_KEY"],
+        temperature=temp
+    )
 
 # ---------------- SIDEBAR ----------------
 with st.sidebar:
@@ -110,7 +120,6 @@ with st.sidebar:
 
     temperature = st.slider("🎨 Creativity", 0.0, 1.0, 0.5)
 
-    # ---- CLEAR CHAT ----
     if st.button("🧹 Clear Chat"):
         st.session_state.messages.clear()
         st.session_state.image_caption = None
@@ -120,7 +129,6 @@ with st.sidebar:
 
     st.divider()
 
-    # ---------------- FEEDBACK BOX ----------------
     st.markdown("### 🆘 Feedback")
 
     feedback = st.text_area(
@@ -145,33 +153,29 @@ with st.sidebar:
 
     st.caption("Created by **Shashank N P**")
 
-# ---------------- LLM ----------------
-llm = ChatGroq(
-    model="llama-3.1-8b-instant",
-    api_key=st.secrets["GROQ_API_KEY"],
-    temperature=temperature
-)
-
 # ---------------- HEADER ----------------
 st.markdown("<h2 style='text-align:center'>💬 NeoMind AI</h2>", unsafe_allow_html=True)
 
-# ---------------- IMAGE PROCESS (IMMEDIATE RESPONSE) ----------------
+# ---------------- IMAGE PROCESS ----------------
 if uploaded_image:
-    current_image_id = uploaded_image.name + str(uploaded_image.size)
+    with st.spinner("Analyzing image..."):
+        current_image_id = uploaded_image.name + str(uploaded_image.size)
 
-    if current_image_id != st.session_state.image_id:
-        image = Image.open(uploaded_image).convert("RGB")
-        inputs = image_processor(image, return_tensors="pt")
-        output = image_model.generate(**inputs)
-        caption = image_processor.decode(output[0], skip_special_tokens=True)
+        if current_image_id != st.session_state.image_id:
+            image_processor, image_model = load_image_model()
 
-        st.session_state.image_caption = caption
-        st.session_state.image_id = current_image_id
+            image = Image.open(uploaded_image).convert("RGB")
+            inputs = image_processor(image, return_tensors="pt")
+            output = image_model.generate(**inputs)
+            caption = image_processor.decode(output[0], skip_special_tokens=True)
 
-        st.session_state.messages.append(
-            AIMessage(content=f"🖼️ **Image detected:** {caption}")
-        )
-        st.rerun()
+            st.session_state.image_caption = caption
+            st.session_state.image_id = current_image_id
+
+            st.session_state.messages.append(
+                AIMessage(content=f"🖼️ **Image detected:** {caption}")
+            )
+            st.rerun()
 
 # ---------------- CHAT HISTORY ----------------
 for msg in st.session_state.messages:
@@ -192,11 +196,15 @@ if prompt or st.session_state.voice_text:
 
     if not answer and st.session_state.image_caption:
         if any(k in user_text.lower() for k in ["image", "photo", "picture", "this"]):
-            detail_prompt = f"Describe this image in detail: {st.session_state.image_caption}"
-            answer = llm.invoke(detail_prompt).content
+            with st.spinner("Thinking..."):
+                llm = load_llm(temperature)
+                detail_prompt = f"Describe this image in detail: {st.session_state.image_caption}"
+                answer = llm.invoke(detail_prompt).content
 
     if not answer:
-        answer = llm.invoke(st.session_state.messages).content
+        with st.spinner("Thinking..."):
+            llm = load_llm(temperature)
+            answer = llm.invoke(st.session_state.messages).content
 
     st.session_state.messages.append(AIMessage(content=answer))
     st.rerun()
